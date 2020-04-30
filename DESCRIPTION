@@ -1,0 +1,38 @@
+Package: MegaLMM
+Type: Package
+Title: MegaLMM
+Version: 0.1.0
+Author: Daniel E Runcie
+Maintainer: Daniel E Runcie <druncie@ucdavis.edu>
+Description: Efficient implementation the MegaLMM model of Runcie et al 2020
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Imports: 
+  methods,
+  Rcpp (>= 0.12.9),
+  RcppEigen,
+  RcppParallel,
+  RcppZiggurat,
+  Matrix,
+  lme4,
+  caret,
+  parallel,
+  doParallel,
+  foreach,
+  abind,
+  reshape2,
+  coda,
+  splines,
+  MASS
+Suggests:
+  knitr, 
+  rmarkdown
+LinkingTo: 
+  Rcpp (>= 0.11.2), 
+  RcppEigen (>= 0.3.3.3.0),
+  RcppZiggurat
+SystemRequirements: GNU make
+RoxygenNote: 6.1.1
+ByteCompile: TRUE
+VignetteBuilder: knitr
