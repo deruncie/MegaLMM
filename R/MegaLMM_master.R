@@ -891,7 +891,6 @@ summary.MegaLMM_state = function(MegaLMM_state){
                 ncol(data_matrices$ZL))),
       c(sprintf('Sampler: %s \n',run_parameters$sampler)),
       c(sprintf('Current iteration: %d, Posterior_samples: %d \n',current_state$nrun,Posterior$total_samples)),
-      c(sprintf('Current factor dimension: %d factors \n',nrow(current_state$Lambda))),
       c(sprintf('Total time: %s \n\n',format(current_state$total_time)))
     )
   })
@@ -906,7 +905,6 @@ print.MegaLMM_state = function(MegaLMM_state){
   with(MegaLMM_state,{
     cat(
       c(sprintf('\n Current iteration: %d, Posterior_samples: %d \n',current_state$nrun,Posterior$total_samples)),
-      c(sprintf('Current factor dimension: %d factors \n',nrow(current_state$Lambda))),
       c(sprintf('Total time: %s \n\n',format(current_state$total_time)))
     )
   })
