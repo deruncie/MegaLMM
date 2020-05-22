@@ -40,7 +40,7 @@ F = X B_f + Z_1 U_f1 + Z_2 U_f2 + ... + E_f
 
 where `F` is a `n x k` matrix of latent factor traits and `Lambda` is a `k x t` matrix of factor loadings. This is the model actually fit by **MegaLMM**. For full details, please see the accompanying paper.
 
-![Model outline](misc/Conceptual_model_v4.pdf)
+![Model outline](misc/Conceptual_model_v4.png)
 
 **Figure 1** from Runcie et al 2020.
 
