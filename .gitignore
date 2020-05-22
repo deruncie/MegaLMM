@@ -8,3 +8,5 @@ src/*.dll
 *.DS_Store*
 vignettes/MegaLMM_example*
 vignettes/setup.RData
+doc
+Meta
