@@ -63,139 +63,141 @@ sample_B2_prec_horseshoe = function(MegaLMM_state,...) {
   return(current_state)
 }
 
-sample_B_prec_RE = function(MegaLMM_state,...){
-  # treats B as a random effect - no parameter-specific shrinkage
-  # error if ncol(B_F)>0
-  priors         = MegaLMM_state$priors
-  run_variables  = MegaLMM_state$run_variables
-  current_state  = MegaLMM_state$current_state
 
-  current_state = with(c(priors,run_variables),
-                       with(B_prior,{
-                         #   list(
-                         #   # load priors
-                         #   B_df   = B_prior$B_df,
-                         #   B_F_df = B_prior$B_F_df,
-                         #   B_QTL_df   = B_prior$B_QTL_df,
-                         #   B_QTL_F_df = B_prior$B_QTL_F_df,
-                         #   separate_QTL_shrinkage = B_prior$separate_QTL_shrinkage
-                         # ),
-                         if(b > 0) {
-                           prec_shape = with(global, nu - 1)
-                           prec_rate = with(global, V * nu)
-                         }
-                         if(b_F > 0) {
-                           stop("sample_B_prec_RE doesn't work with B_F")
-                         }
-                         within(current_state,{
-
-                           # initialize variables if needed
-                           if(!exists('B_prec')){
-                             if(b > 0) {
-                               B_prec = matrix(rgamma(b,shape = prec_shape,rate=prec_rate),nrow = b, ncol = p)
-                             } else{
-                               B_prec = matrix(0,nrow=0,ncol=p)
-                             }
-                           }
-                           B2 = B^2
-
-                           B_prec[] = matrix(rgamma(b,shape = prec_shape + p/2,rate = prec_rate + rowSums(B2)/2),nrow = b, ncol = p)
-
-                           if(length(resid_intercept) > 0){
-                             B_prec[1,resid_intercept] = 1e-10
-                           }
-                         })
-                       }))
-  return(current_state)
-}
-
-
-
-sample_B_prec_ARD = function(MegaLMM_state,...){
-  priors         = MegaLMM_state$priors
-  run_variables  = MegaLMM_state$run_variables
-  current_state  = MegaLMM_state$current_state
-
-  current_state = with(c(priors,run_variables),
-                       with(B_prior,{
-                       #   list(
-                       #   # load priors
-                       #   B_df   = B_prior$B_df,
-                       #   B_F_df = B_prior$B_F_df,
-                       #   B_QTL_df   = B_prior$B_QTL_df,
-                       #   B_QTL_F_df = B_prior$B_QTL_F_df,
-                       #   separate_QTL_shrinkage = B_prior$separate_QTL_shrinkage
-                       # ),
-                              if(b > 0) {
-                                tau_shape = with(global, nu - 1)
-                                tau_rate = with(global, V * nu)
-                              }
-                              if(b_F > 0) {
-                                tau_F_shape = with(global_F, nu - 1)
-                                tau_F_rate = with(global_F, V * nu)
-                              }
-                              within(current_state,{
-
-                                 # initialize variables if needed
-                                 if(!exists('B_tau')){
-                                   if(b > 0) {
-                                     B_tau = matrix(c(1e-10,rgamma(b-1,shape = tau_shape, rate = tau_rate)),nrow=1)
-                                   } else{
-                                     B_tau = matrix(0,nrow=1,ncol=0)
-                                   }
-                                   if(b_F > 0) {
-                                     B_F_tau = matrix(rgamma(b_F,shape = tau_F_shape, rate = tau_F_rate),nrow=1)
-                                   } else{
-                                     B_F_tau = matrix(0,nrow=1,ncol=0)
-                                   }
-
-                                   B_prec = matrix(B_tau,nrow = b, ncol = p)
-                                   B_F_prec = matrix(B_F_tau,nrow = b_F, ncol = k)
-                                 }
-                                 B2 = B^2
-                                 B_F2 = B_F^2 * tot_F_prec[rep(1,b_F),]  # need to account for tot_F_prec
-
-                                 if(ncol(fixed_effects_common)>0){
-                                   ib = fixed_effects_common[1,]
-                                   ib_F = fixed_effects_common[2,]
-                                   tau = rgamma(length(ib),
-                                                shape = tau_shape + ncol(B2)/2 + ncol(B_F2)/2,
-                                                rate = tau_rate +
-                                                  rowSums((B2[ib,,drop=FALSE] * B_prec[ib,,drop=FALSE]/c(B_tau)[ib]))/2 +
-                                                  rowSums(B_F2[ib_F,,drop=FALSE] * B_F_prec[ib_F,,drop=FALSE]/c(B_F_tau)[ib_F])/2)
-                                   B_tau[1,ib] = tau
-                                   B_F_tau[1,ib_F] = tau
-                                 }
-                                 if(length(fixed_effects_only_resid) > 0){
-                                   ib = fixed_effects_only_resid
-                                   tau = rgamma(length(ib),
-                                                shape = tau_shape + ncol(B2)/2,
-                                                rate = tau_rate +
-                                                  rowSums((B2[ib,,drop=FALSE] * B_prec[ib,,drop=FALSE]/c(B_tau)[ib]))/2)
-                                   B_tau[1,ib] = tau
-
-                                 }
-                                 if(length(fixed_effects_only_factors) > 0){
-                                   ib = fixed_effects_only_factors
-                                   tau = rgamma(length(ib),
-                                                shape = tau_shape + ncol(B_F2)/2,
-                                                rate = tau_rate +
-                                                  rowSums(B_F2[ib,,drop=FALSE] * B_F_prec[ib,,drop=FALSE]/c(B_F_tau)[ib])/2)
-                                   B_F_tau[1,ib] = tau
-
-                                 }
-                                 B_prec[] = matrix(rgamma(b*p,shape = (B_df + 1)/2,rate = (B_df + B2*c(B_tau))/2),nr = b,nc = p)
-                                 B_F_prec[] = matrix(rgamma(b_F*k,shape = (B_F_df + 1)/2,rate = (B_F_df + B_F2*t(B_F_tau)[,rep(1,k)])/2),nr = b_F,nc = k)
-                                 B_prec[] = B_prec*c(B_tau)
-                                 if(resid_intercept){
-                                   B_tau[1,1] = 1e-10
-                                   B_prec[1,] = 1e-10
-                                 }
-                                 B_F_prec[] = B_F_prec*t(B_F_tau)[,rep(1,k)]
-                                 B_F_tau[1,X_F_zero_variance] = 1e10
-                                 B_F_prec[X_F_zero_variance,] = 1e10
-                               })
-                         }))
-  return(current_state)
-}
-
+# old code currently non-functional!
+# sample_B_prec_RE = function(MegaLMM_state,...){
+#   # treats B as a random effect - no parameter-specific shrinkage
+#   # error if ncol(B_F)>0
+#   priors         = MegaLMM_state$priors
+#   run_variables  = MegaLMM_state$run_variables
+#   current_state  = MegaLMM_state$current_state
+# 
+#   current_state = with(c(priors,run_variables),
+#                        with(B_prior,{
+#                          #   list(
+#                          #   # load priors
+#                          #   B_df   = B_prior$B_df,
+#                          #   B_F_df = B_prior$B_F_df,
+#                          #   B_QTL_df   = B_prior$B_QTL_df,
+#                          #   B_QTL_F_df = B_prior$B_QTL_F_df,
+#                          #   separate_QTL_shrinkage = B_prior$separate_QTL_shrinkage
+#                          # ),
+#                          if(b > 0) {
+#                            prec_shape = with(global, nu - 1)
+#                            prec_rate = with(global, V * nu)
+#                          }
+#                          if(b_F > 0) {
+#                            stop("sample_B_prec_RE doesn't work with B_F")
+#                          }
+#                          within(current_state,{
+# 
+#                            # initialize variables if needed
+#                            if(!exists('B_prec')){
+#                              if(b > 0) {
+#                                B_prec = matrix(rgamma(b,shape = prec_shape,rate=prec_rate),nrow = b, ncol = p)
+#                              } else{
+#                                B_prec = matrix(0,nrow=0,ncol=p)
+#                              }
+#                            }
+#                            B2 = B^2
+# 
+#                            B_prec[] = matrix(rgamma(b,shape = prec_shape + p/2,rate = prec_rate + rowSums(B2)/2),nrow = b, ncol = p)
+# 
+#                            if(length(resid_intercept) > 0){
+#                              B_prec[1,resid_intercept] = 1e-10
+#                            }
+#                          })
+#                        }))
+#   return(current_state)
+# }
+# 
+# 
+# 
+# sample_B_prec_ARD = function(MegaLMM_state,...){
+#   priors         = MegaLMM_state$priors
+#   run_variables  = MegaLMM_state$run_variables
+#   current_state  = MegaLMM_state$current_state
+# 
+#   current_state = with(c(priors,run_variables),
+#                        with(B_prior,{
+#                        #   list(
+#                        #   # load priors
+#                        #   B_df   = B_prior$B_df,
+#                        #   B_F_df = B_prior$B_F_df,
+#                        #   B_QTL_df   = B_prior$B_QTL_df,
+#                        #   B_QTL_F_df = B_prior$B_QTL_F_df,
+#                        #   separate_QTL_shrinkage = B_prior$separate_QTL_shrinkage
+#                        # ),
+#                               if(b > 0) {
+#                                 tau_shape = with(global, nu - 1)
+#                                 tau_rate = with(global, V * nu)
+#                               }
+#                               if(b_F > 0) {
+#                                 tau_F_shape = with(global_F, nu - 1)
+#                                 tau_F_rate = with(global_F, V * nu)
+#                               }
+#                               within(current_state,{
+# 
+#                                  # initialize variables if needed
+#                                  if(!exists('B_tau')){
+#                                    if(b > 0) {
+#                                      B_tau = matrix(c(1e-10,rgamma(b-1,shape = tau_shape, rate = tau_rate)),nrow=1)
+#                                    } else{
+#                                      B_tau = matrix(0,nrow=1,ncol=0)
+#                                    }
+#                                    if(b_F > 0) {
+#                                      B_F_tau = matrix(rgamma(b_F,shape = tau_F_shape, rate = tau_F_rate),nrow=1)
+#                                    } else{
+#                                      B_F_tau = matrix(0,nrow=1,ncol=0)
+#                                    }
+# 
+#                                    B_prec = matrix(B_tau,nrow = b, ncol = p)
+#                                    B_F_prec = matrix(B_F_tau,nrow = b_F, ncol = k)
+#                                  }
+#                                  B2 = B^2
+#                                  B_F2 = B_F^2 * tot_F_prec[rep(1,b_F),]  # need to account for tot_F_prec
+# 
+#                                  if(ncol(fixed_effects_common)>0){
+#                                    ib = fixed_effects_common[1,]
+#                                    ib_F = fixed_effects_common[2,]
+#                                    tau = rgamma(length(ib),
+#                                                 shape = tau_shape + ncol(B2)/2 + ncol(B_F2)/2,
+#                                                 rate = tau_rate +
+#                                                   rowSums((B2[ib,,drop=FALSE] * B_prec[ib,,drop=FALSE]/c(B_tau)[ib]))/2 +
+#                                                   rowSums(B_F2[ib_F,,drop=FALSE] * B_F_prec[ib_F,,drop=FALSE]/c(B_F_tau)[ib_F])/2)
+#                                    B_tau[1,ib] = tau
+#                                    B_F_tau[1,ib_F] = tau
+#                                  }
+#                                  if(length(fixed_effects_only_resid) > 0){
+#                                    ib = fixed_effects_only_resid
+#                                    tau = rgamma(length(ib),
+#                                                 shape = tau_shape + ncol(B2)/2,
+#                                                 rate = tau_rate +
+#                                                   rowSums((B2[ib,,drop=FALSE] * B_prec[ib,,drop=FALSE]/c(B_tau)[ib]))/2)
+#                                    B_tau[1,ib] = tau
+# 
+#                                  }
+#                                  if(length(fixed_effects_only_factors) > 0){
+#                                    ib = fixed_effects_only_factors
+#                                    tau = rgamma(length(ib),
+#                                                 shape = tau_shape + ncol(B_F2)/2,
+#                                                 rate = tau_rate +
+#                                                   rowSums(B_F2[ib,,drop=FALSE] * B_F_prec[ib,,drop=FALSE]/c(B_F_tau)[ib])/2)
+#                                    B_F_tau[1,ib] = tau
+# 
+#                                  }
+#                                  B_prec[] = matrix(rgamma(b*p,shape = (B_df + 1)/2,rate = (B_df + B2*c(B_tau))/2),nr = b,nc = p)
+#                                  B_F_prec[] = matrix(rgamma(b_F*k,shape = (B_F_df + 1)/2,rate = (B_F_df + B_F2*t(B_F_tau)[,rep(1,k)])/2),nr = b_F,nc = k)
+#                                  B_prec[] = B_prec*c(B_tau)
+#                                  if(resid_intercept){
+#                                    B_tau[1,1] = 1e-10
+#                                    B_prec[1,] = 1e-10
+#                                  }
+#                                  B_F_prec[] = B_F_prec*t(B_F_tau)[,rep(1,k)]
+#                                  B_F_tau[1,X_F_zero_variance] = 1e10
+#                                  B_F_prec[X_F_zero_variance,] = 1e10
+#                                })
+#                          }))
+#   return(current_state)
+# }
+# 
