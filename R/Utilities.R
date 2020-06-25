@@ -1,3 +1,9 @@
+# Copyright 2020 Daniel Runcie
+# Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
+# that can be found in the LICENSE file and available at
+# https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+
 my_detectCores = function() {
   ncores = try(suppressWarnings(as.numeric(system('printenv SLURM_CPUS_PER_TASK',intern=T))),silent=T)
   if(length(ncores) == 0 || is.na(ncores)) ncores = parallel::detectCores()

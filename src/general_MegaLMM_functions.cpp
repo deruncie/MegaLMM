@@ -1,3 +1,9 @@
+// Copyright 2020 Daniel Runcie
+// Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
+// that can be found in the LICENSE file and available at
+// https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+
 #include <math.h>
 #include <iostream>
 #include "MegaLMM_types.h"

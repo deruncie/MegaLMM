@@ -1,4 +1,10 @@
-  #' Set MegaLMM run parameters
+# Copyright 2020 Daniel Runcie
+# Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
+# that can be found in the LICENSE file and available at
+# https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+
+#' Set MegaLMM run parameters
 #'
 #' Function to create run_parameters list for initializing MegaLMM model
 #'
@@ -250,7 +256,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
 
   # -------- regressions ---------- #
   # X2_F and X2_R (and V_F and V_R) are the coefficient matrices for the regularized regression coefficients
-  # these are specifed as lists with either X (n x b) or {U(nxm),V(mxp)}
+  # these are specifed as lists with either X (n x b) or {U(nxm),V(mxb)}
   X2_R = matrix(0,n,0)
   X2_F = matrix(0,n,0)
   U2_F = X2_F
