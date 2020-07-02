@@ -75,7 +75,7 @@ MegaLMM_control = function(
 #'     if that is easier. See Vignette.
 #'
 #' @param tot_Y_var List of parameters of inverse gamma distribution for residual variances, specifically:
-#'     \code{V} and \code{nu}, give shape = \code{nu/2} and scale = \code{nu*V/2}, so mean = \code{(V*nu)/(nu-2)}
+#'     \code{V} and \code{nu}, give shape = \code{nu-1} and scale = \code{1/(nu*V)}, so mean = \code{~V}
 #' @param tot_F_var List of parameters of inverse gamma distribution for factor variances. See \code{tot_Y_var}.
 #'     This parameter provides the parameter extension of Ghosh and Dunson (2009), but is removed
 #'     from all Factor parameters before they are saved in Posterior
@@ -299,7 +299,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
       } else{
         if(all(c('U','V') %in% names(extra_regressions))){
           X2_R = extra_regressions$U %*% extra_regressions$V
-          b2_R = ncol(V2_R)
+          b2_R = ncol(X2_R)
         } else{
           stop("missing U or V in extra_regressions")
         }
@@ -384,7 +384,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
           K_inv = K
           L = as(diag(1,nrow(K)),'dgCMatrix')
         }
-        if(is.null(id_names)) id_names = 1:length(id_names)
+       # if(is.null(id_names)) id_names = 1:length(id_names)
         rownames(L) = paste(id_names,re_name,sep='::')
         K = fix_K(K)
         ZL = Z %*% L
@@ -448,7 +448,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
     if(ncol(Lambda_fixed) != p) stop("wrong dimensions of Lambda_fixed")
     if(nrow(Lambda_fixed) >= run_parameters$K) stop("nrow(Lambda_fixed) >= K")
     fixed_factors = rep(F,run_parameters$K)
-    fixed_factors[1:ncol(Lambda_fixed)] = T
+    fixed_factors[1:nrow(Lambda_fixed)] = T
   }
   Kr = run_parameters$K - sum(fixed_factors)
 
@@ -499,7 +499,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
     current_state  = list(),
     run_ID         = run_ID,
     data_matrices  = data_matrices,
-    priors         = list,
+    priors         = list(),
     run_parameters = run_parameters,
     run_variables  = run_variables
   )
@@ -539,7 +539,7 @@ set_priors_MegaLMM = function(MegaLMM_state,priors = MegaLMM_priors()) {
   # total precision
   if(length(priors$tot_Y_var$V == 1)) {
     priors$tot_Y_var$V = rep(priors$tot_Y_var$V,p)
-    priors$tot_Y_varnu = rep(priors$tot_Y_var$nu,p)
+    priors$tot_Y_var$nu = rep(priors$tot_Y_var$nu,p)
   }
   priors$tot_Eta_prec_rate   = with(priors$tot_Y_var,V * nu)
   priors$tot_Eta_prec_shape  = with(priors$tot_Y_var,nu - 1)
