@@ -537,7 +537,7 @@ set_priors_MegaLMM = function(MegaLMM_state,priors = MegaLMM_priors()) {
   # ----- re-formulate priors --- #
   # ----------------------------- #
   # total precision
-  if(length(priors$tot_Y_var$V == 1)) {
+  if(length(priors$tot_Y_var$V) == 1) {
     priors$tot_Y_var$V = rep(priors$tot_Y_var$V,p)
     priors$tot_Y_var$nu = rep(priors$tot_Y_var$nu,p)
   }
