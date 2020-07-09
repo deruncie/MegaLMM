@@ -53,13 +53,13 @@ sample_latent_traits = function(MegaLMM_state,...) {
         resid_h2_index[cols],
         chol_V_list_list[[set]],
         tot_Eta_prec[cols],
-        tot_Eta_prec_shape, tot_Eta_prec_rate[1],
+        tot_Eta_prec_shape, tot_Eta_prec_rate,
         matrix(0,nr = sum(QtX1_list[[set]]$keepColumns),ncol = length(cols)),
         rep(priors$cis_effects_prior$prec,sum(cis_effects_index %in% cols)),
         prior_mean[,cols,drop=FALSE],
         prior_prec[,cols,drop=FALSE]
       )
-
+      
       # extract samples
 
       # alpha1 -> un-shunk rows of B

@@ -531,6 +531,7 @@ set_priors_MegaLMM = function(MegaLMM_state,priors = MegaLMM_priors()) {
   # returns MegaLMM_state
 
   p = MegaLMM_state$run_variables$p
+  K = MegaLMM_state$run_parameters$K
   h2s_matrix = MegaLMM_state$data_matrices$h2s_matrix
 
   # ----------------------------- #
@@ -540,6 +541,10 @@ set_priors_MegaLMM = function(MegaLMM_state,priors = MegaLMM_priors()) {
   if(length(priors$tot_Y_var$V) == 1) {
     priors$tot_Y_var$V = rep(priors$tot_Y_var$V,p)
     priors$tot_Y_var$nu = rep(priors$tot_Y_var$nu,p)
+  }
+  if(length(priors$tot_F_var$V) == 1) {
+    priors$tot_F_var$V = rep(priors$tot_F_var$V,K)
+    priors$tot_F_var$nu = rep(priors$tot_F_var$nu,K)
   }
   priors$tot_Eta_prec_rate   = with(priors$tot_Y_var,V * nu)
   priors$tot_Eta_prec_shape  = with(priors$tot_Y_var,nu - 1)

@@ -52,19 +52,19 @@ find_candidate_states <- function(h2s_matrix, step_size, old_state) {
 }
 
 #' Draws samples from all ``fixed" coefficients (fixed and random) of a set of parallel linear regression models, conditional on the variance components.
-#' 
+#'
 #' The model is either: \itemize{
-#' \item y_i = W_base*alpha1 + W_list_[i]*alpha2 + X*beta + e, e ~ N(0,1/Y_prec[i]*V)
-#' \item y_i = W_base*alpha1 + W_list_[i]*alpha2 + X*V_*beta + e, e ~ N(0,1/Y_prec[i]*V)
+#' \item y_i = X1_base*alpha1 + X1_list_[i]*alpha2 + X2*beta + e, e ~ N(0,1/Y_prec[i]*V)
+#' \item y_i = X1_base*alpha1 + X1_list_[i]*alpha2 + X2*V_*beta + e, e ~ N(0,1/Y_prec[i]*V)
 #' }
-#' where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
+#' Where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
 #' Each column of Y is considered independent
-#' 
+#'
 #' @param Y n x p matrix of observations
-#' @param W_base n x a1 matrix of W covariates common to all p. Can be NULL
-#' @param W_list_ p-list of n x a2 matrices of W covariates unique to each p. Can be NULL
-#' @param X either X, a n x b matrix, or U, a n x m matrix. If U, then V must be non-NULL
-#' @param V_ m x b matrix if X is U, otherwise NULL
+#' @param X1_base n x a1 matrix of X1 covariates common to all p. Can be NULL
+#' @param X1_list_ p-list of n x a2 matrices of X1 covariates unique to each p. Can be NULL
+#' @param X2 either X2, a n x b matrix, or Ux, a n x m matrix. If Ux, then V must be non-NULL
+#' @param V_ m x b matrix if X2 is Ux, otherwise NULL
 #' @param h2s_index p-vector of indices for to select appropriate V of each trait
 #' @param chol_V_list_ list of cholesky decompositions of V: RtR (each nxn). Can be either dense or sparse
 #' @param Y_prec p-vector of Y current precisions
@@ -79,8 +79,8 @@ find_candidate_states <- function(h2s_matrix, step_size, old_state) {
 #'   \item beta b x p matrix of beta
 #'   \item Y_prec p x 1 vector of Y_prec
 #' }
-regression_sampler_parallel <- function(Y, W_base, W_list_, X, V_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta) {
-    .Call(`_MegaLMM_regression_sampler_parallel`, Y, W_base, W_list_, X, V_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta)
+regression_sampler_parallel <- function(Y, X1_base, X1_list_, X2, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta) {
+    .Call(`_MegaLMM_regression_sampler_parallel`, Y, X1_base, X1_list_, X2, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta)
 }
 
 sample_MME_ZKZts_c <- function(Y, Z_, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index) {
