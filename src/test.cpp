@@ -1,9 +1,160 @@
+
+#include <math.h>
+#include <iostream>
+#include "MegaLMM_types.h"
+
+using namespace Eigen;
+
+
+// [[Rcpp::export]]
+double regression_sampler_v4(  
+    Map<MatrixXd> X, // nxb
+    const ArrayXd& diag_XtX, // bx1
+    Map<VectorXd> yCorr, // nx1
+    Map<VectorXd> alpha, // bx1
+    Map<VectorXd> beta, // bx1
+    Map<VectorXd> delta, // bx1
+    double&  invVarRes,
+    const ArrayXd& varEffects, // bx1
+    double pi,
+    double df,
+    double scale
+) {
+  double logPi         = log(pi);
+  double logPiComp     = log(1.0-pi);
+  double logDelta0     = logPi;
+  // double invVarRes     = 1.0 / vare;
+  ArrayXd invVarEffects = varEffects.inverse();
+  ArrayXd logVarEffects = varEffects.log();
+  int nLoci         = 0;
+  int nMarkers      = alpha.size();
+  
+  // Sample beta = alpha*delta
+  for(int j = 0; j < nMarkers; j++) {
+    double rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
+    double lhs = diag_XtX[j]*invVarRes + invVarEffects[j];
+    double invLhs = 1.0/lhs;
+    double gHat = rhs * invLhs;
+    double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
+    double probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
+    double oldAlpha = alpha[j];
+    
+    double u = R::runif(0,1);
+    // Rcout << logDelta1 << " ";
+    double r = R::rnorm(0,1);
+    if(u < probDelta1) {
+      delta[j] = 1.0;
+      beta[j] = gHat + r*sqrt(invLhs);
+      alpha[j] = beta[j];
+      yCorr += X.col(j) * (oldAlpha - alpha[j]);
+      nLoci++;
+    } else {
+      if(oldAlpha != 0) {
+        yCorr += X.col(j) * oldAlpha;
+      } 
+      delta[j] = 0;
+      beta[j] = r*sqrt(varEffects[j]);
+      alpha[j] = 0;
+    }
+  }
+  // Rcout << nLoci << std::endl;
+  // Rcout << delta << std::endl;
+  // sample invVarRes
+  invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
+  return(invVarRes);
+}
+//   
 // 
-// #include <math.h>
-// #include <iostream>
-// #include "MegaLMM_types.h"
-// 
-// using namespace Eigen;
+// VectorXd regression_sampler_v1(  // returns vector of length 1 + a + b for y_prec, alpha, beta, useful when b < n
+//     const Ref<const VectorXd>& y,           // nx1
+//     const MatrixXd& X1,           // nxa
+//     const MatrixXd& RinvtX2,                // nxb
+//     const MatrixXd& C,                     // bxb
+//     const VectorXd& prior_prec_alpha, // ax 1
+//     const Ref<const VectorXd>& prior_mean_beta,  // bx1
+//     const Ref<const VectorXd>& prior_prec_beta,  // bx1
+//     const R_matrix& chol_V,                    // either a upper-triangular matrix or upper-triangular CsparseMatrix. Also called R here with RtR = V
+//     double Y_prec,                    // double
+//     const VectorXd& randn_alpha,
+//     const Ref<const VectorXd>& randn_beta,
+//     const double rgamma_1,
+//     const double Y_prec_b0
+// ){
+//   int n = y.size();
+//   int a = X1.cols();
+//   int b = RinvtX2.cols();
+//   
+//   // Check inputs
+//   if(X1.rows() != n) stop("Wrong dimension of X1");
+//   if(RinvtX2.rows() != n) stop("Wrong dimension of X2");
+//   if(C.rows() != b || C.cols() != b) stop("Wrong dimension of C");
+//   if(prior_prec_alpha.size() != a) stop("Wrong length of prior_prec_alpha");
+//   if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
+//   if(prior_prec_beta.size() != b) stop("Wrong length of prior_prec_beta");
+//   if(randn_alpha.size() != a) stop("Wrong length of randn_alpha");
+//   if(randn_beta.size() != b) stop("Wrong length of randn_beta");
+//   
+//   // Calculate cholesky of A_beta
+//   // C = Xt(RtR)^-1X
+//   MatrixXd C_beta = C;
+//   C_beta.diagonal() += prior_prec_beta;
+//   LLT<MatrixXd> A_beta_llt;
+//   A_beta_llt.compute(C_beta);
+//   MatrixXd chol_A_beta = A_beta_llt.matrixU();
+//   // Y_prec * chol_A_beta^\T * chol_A_beta = A_beta
+//   
+//   // Step 1
+//   VectorXd alpha(a);
+//   VectorXd y_tilde = y;
+//   if(a > 0) {
+//     // Sample alpha
+//     // Calculate A_alpha = Y_prec*X1^T*V_beta^{-1}*X1 + D_alpha^{-1}
+//     // We don't need to actually calculate V_beta^{-1} directly.
+//     // Instead,
+//     MatrixXd RinvtX1 = get_RinvtX2(chol_V,X1);  // n*n*a -> n x a
+//     MatrixXd X1tVinvX2 = RinvtX1.transpose() * RinvtX2; // a*n*b -> a*b
+//     MatrixXd cholAbetainvt_X2tVinvX1 = chol_A_beta.transpose().triangularView<Lower>().solve(X1tVinvX2.transpose()); // b*b*a -> b x a
+//     
+//     MatrixXd A_alpha = RinvtX1.transpose() * RinvtX1 - cholAbetainvt_X2tVinvX1.transpose() * cholAbetainvt_X2tVinvX1;
+//     A_alpha.diagonal() += prior_prec_alpha;
+//     
+//     VectorXd Rinvsqy = get_RinvtX2(chol_V,y); // n*n*q -> n x 1;
+//     VectorXd XtRinvy = RinvtX2.transpose() * Rinvsqy; // b*n*1 >- b x 1
+//     VectorXd invSqAbXtRinvy = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy); // b*b*1 -> b*1
+//     
+//     VectorXd X1t_V_beta_inv_y = RinvtX1.transpose() * Rinvsqy - cholAbetainvt_X2tVinvX1.transpose() * invSqAbXtRinvy;
+//     
+//     LLT<MatrixXd> A_alpha_llt;
+//     A_alpha_llt.compute(A_alpha);
+//     MatrixXd chol_A_alpha = A_alpha_llt.matrixU();
+//     
+//     alpha = chol_A_alpha.transpose().triangularView<Lower>().solve(X1t_V_beta_inv_y) + 1.0/sqrt(Y_prec) * randn_alpha;
+//     alpha = chol_A_alpha.triangularView<Upper>().solve(alpha);
+//     
+//     y_tilde = y - X1 * alpha;
+//   }
+//   
+//   // Step 2 - sample Y_prec
+//   // We don't need to actually calculate V_beta^{-1} directly.
+//   VectorXd RinvSqy = get_RinvtX2(chol_V,y_tilde);
+//   VectorXd XtRinvy = RinvtX2.transpose() * RinvSqy;
+//   VectorXd prod1 = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy);
+//   double score = Y_prec_b0 + (RinvSqy.dot(RinvSqy) - prod1.dot(prod1))/2;
+//   Y_prec = rgamma_1/score;
+//   
+//   // Step 3 - sample beta
+//   VectorXd XtRinvy_std_mu = XtRinvy*Y_prec + prior_prec_beta.asDiagonal()*prior_mean_beta;
+//   VectorXd beta = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy_std_mu) / sqrt(Y_prec) + randn_beta;
+//   beta = chol_A_beta.triangularView<Upper>().solve(beta) / sqrt(Y_prec);
+//   
+//   VectorXd result(1+a+b);
+//   result << Y_prec,alpha,beta;
+//   
+//   return(result);
+// }
+
+
+
 // 
 // 
 // 
