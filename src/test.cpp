@@ -5,7 +5,6 @@
 
 using namespace Eigen;
 
-
 // [[Rcpp::export]]
 double regression_sampler_v4(  
     Map<MatrixXd> X, // nxb
@@ -40,7 +39,6 @@ double regression_sampler_v4(
     double oldAlpha = alpha[j];
     
     double u = R::runif(0,1);
-    // Rcout << logDelta1 << " ";
     double r = R::rnorm(0,1);
     if(u < probDelta1) {
       delta[j] = 1.0;
@@ -57,8 +55,7 @@ double regression_sampler_v4(
       alpha[j] = 0;
     }
   }
-  // Rcout << nLoci << std::endl;
-  // Rcout << delta << std::endl;
+  
   // sample invVarRes
   invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
   return(invVarRes);
