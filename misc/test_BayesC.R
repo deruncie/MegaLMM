@@ -1,6 +1,6 @@
 library(microbenchmark)
 n = 1000
-p = 5000
+p = 50000
 
 X = matrix(sample(c(0,1),n*p,replace=T),n,p)
 
@@ -15,7 +15,7 @@ df_alpha = 4
 scale_alpha = 1
 
 nIter = 1000
-thin = 100
+thin = 10
 beta_samples = matrix(0,nIter,p)
 var_samples = matrix(0,nIter,3)
 # invVarRes_samples = rep(NA,nIter)
@@ -25,23 +25,17 @@ delta = rep(1,p)
 alpha = beta
 invVarRes = 1
 varEffects = rep(1,p)
-pi = 1-3/1000
+pi = 1-3/p
 yCorr = y - X %*% beta
 diag_XtX = colSums(X^2)
 for(i in 1:nIter){
-  # for(j in 1:thin) {
-  invVarRes = regression_sampler_v4(X,diag_XtX,yCorr,alpha,beta,delta,invVarRes,varEffects,pi,df,scale)
-  # res = regression_sampler_v4(X,diag_XtX,yCorr,alpha,beta,delta,invVarRes,varEffects,pi,df,scale)
-  # invVarRes = res$invVarRes
-  # yCorr = res$yCorr
-  # alpha = res$alpha
-  # beta = res$beta
-  # delta = res$delta
-  nLoci = sum(delta)
+  for(j in 1:thin) {
+    invVarRes = regression_sampler_v4(X,diag_XtX,yCorr,alpha,beta,delta,invVarRes,varEffects,pi,df,scale)
+    nLoci = sum(delta)
     varEffects[] = (sum(alpha^2) + df_alpha*scale_alpha)/rchisq(1,nLoci+df_alpha)
     pi = rbeta(1,p-nLoci+1,nLoci+1)
-  # }
-  print(nLoci)
+  }
+  # print(nLoci)
   var_samples[i,] = c(1/invVarRes,varEffects[1],pi)
   beta_samples[i,] = beta
   # invVarRes_samples[i] = invVarRes

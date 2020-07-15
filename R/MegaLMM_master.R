@@ -355,22 +355,27 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
       if(!'ZL' %in% ls()){
         if('K' %in% ls() && !is.null(K)){
           id_names = rownames(K)
-          ldl_k = LDLt(K)
-          large_d = ldl_k$d > run_parameters$K_eigen_tol
-          r_eff = sum(large_d)
-          # if need to use reduced rank model, then use D of K in place of K and merge L into Z
-          # otherwise, use original K, set L = Diagonal(1,r)
-          if(r_eff < length(ldl_k$d)) {
-            K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
-            K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
-            L = t(ldl_k$P) %*% ldl_k$L[,large_d]
-          } else{
+          if(is(K,'Matrix') & isDiagonal(K)) {
             L = as(diag(1,nrow(K)),'dgCMatrix')
-            K_inv = as(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')
+            K_inv = as(diag(1/diag(K)),'dgCMatrix')
+          } else {
+            ldl_k = LDLt(K)
+            large_d = ldl_k$d > run_parameters$K_eigen_tol
+            r_eff = sum(large_d)
+            # if need to use reduced rank model, then use D of K in place of K and merge L into Z
+            # otherwise, use original K, set L = Diagonal(1,r)
+            if(r_eff < length(ldl_k$d)) {
+              K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
+              K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
+              L = t(ldl_k$P) %*% ldl_k$L[,large_d]
+            } else{
+              L = as(diag(1,nrow(K)),'dgCMatrix')
+              K_inv = as(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')
+            }
+            rm(list=c('ldl_k','large_d','r_eff'))
           }
           if(is.null(rownames(K))) rownames(K) = 1:nrow(K)
           rownames(K_inv) = rownames(K)
-          rm(list=c('ldl_k','large_d','r_eff'))
         } else if ('K_inv' %in% ls() && !is.null(K_inv)){
           id_names = rownames(K_inv)
           if(is.null(rownames(K_inv))) rownames(K_inv) = 1:nrow(K_inv)
@@ -782,7 +787,19 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
 
   # cholesky decompositions (RtR) of each K_inverse matrix
-  chol_Ki_mats = lapply(RE_setup,function(re) as(chol(as.matrix(re$K_inv)),'dgCMatrix'))
+  # chol_Ki_mats = lapply(RE_setup,function(re) as(chol(as.matrix(re$K_inv)),'dgCMatrix'))
+  chol_Ki_mats = lapply(RE_setup,function(re) {
+    K_inv = re$K_inv
+    if(is(K_inv,'Matrix')) {
+      if(isDiagonal(K_inv)) {
+        sparseMatrix(i=1:nrow(K_inv),j=1:nrow(K_inv),x=sqrt(diag(K_inv)))
+      } else{
+        as(chol(forceSymmetric(K_inv)),'dgCMatrix')
+      }
+    } else {
+      as(chol(K_inv),'dgCMatrix')
+    }
+  })
 
 
   Qt_list = list()
@@ -816,7 +833,12 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       Qt = t(Q_ZU %**% RKRt_U)
     } else{
       ZKZt = with(RE_setup[[1]],ZL[x,,drop=FALSE] %*% K %*% t(ZL[x,,drop=FALSE]))
-      result = svd(ZKZt)
+      if(is(ZKZt,'Matrix') & isDiagonal(ZKZt)) {
+        nn = nrow(ZKZt)
+        result = list(d = diag(ZKZt),u = sparseMatrix(i=1:nn,j=1:nn,x=1))
+      } else{
+        result = svd(ZKZt)
+      }
       Qt = t(result$u)
     }
     Qt = as(drop0(as(Qt,'dgCMatrix'),tol = run_parameters$drop0_tol),'dgCMatrix')
@@ -860,7 +882,15 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
         chol_V_list_list[[set]][[i]] = as.matrix(chol_V_list_list[[set]][[i]])
       }
     }
-    chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
+    if(length(RE_setup) == 1 & isDiagonal(ZtZ_set) & all(sapply(chol_Ki_mats,isDiagonal))) {
+      # in the case of 1 random effect with diagonal covariance matrix, we can skip the expensive calculations
+      chol_ZtZ_Kinv_list_list[[set]] = sapply(1:length(h2s_matrix),function(i) {
+        nn = nrow(ZtZ_set)
+        sparseMatrix(i=1:nn,j=1:nn,x = sqrt(1/(1-h2s_matrix[1,i])*diag(ZtZ_set) + 1/h2s_matrix[1,i]*diag(chol_Ki_mats[[1]])^2))
+      })
+    } else{
+      chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
+    }
   }
   if(verbose) close(pb)
 

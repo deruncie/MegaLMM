@@ -22,9 +22,9 @@ It can be skipped if you are loading your own data in a different way
 
 ```{r}
 seed = 1  # for reproducibility
-nSire = 50 # simulation design is a half-sib design: each of nSire fathers has nRep children, each with a different female
+nSire = 1000 # simulation design is a half-sib design: each of nSire fathers has nRep children, each with a different female
 nRep = 10
-nTraits = 100
+nTraits = 1000
 nFixedEffects = 2 # fixed effects are effects on the factors
 nFactors = 10
 factor_h2s = c(rep(0,nFactors/2),rep(0.9,nFactors/2))  # factor_h2 is the % of variance in each factor trait that is explained by additive genetic variation.
@@ -58,7 +58,7 @@ run_parameters = MegaLMM_control(
   h2_divisions = 20, # Each variance component is allowed to explain between 0% and 100% of the total variation. How many segments should the range [0,100) be divided into for each random effect?
   h2_step_size = NULL, # if NULL, all possible values of random effects are tried each iteration. If in (0,1), a new candidate set of random effect proportional variances is drawn uniformily with a range of this size
   burn = 00,  # number of burn in samples before saving posterior samples
-  K = 15 # number of factors
+  K = 20 # number of factors
 )
 ```
 
@@ -166,10 +166,11 @@ Then, you can ask for more samples, and repeat until you have enough.
 
 ```{r results="hide"}
 # The following code is optional, but tries to guess for your system how many CPUs to use for fastest processing
-(n_threads = optimize_n_threads(MegaLMM_state,seq(1,RcppParallel::defaultNumThreads(),by=1),times=2))
+n_threads = list(optim = RcppParallel::defaultNumThreads()-1)
+# (n_threads = optimize_n_threads(MegaLMM_state,seq(1,RcppParallel::defaultNumThreads(),by=1),times=2))
 set_MegaLMM_nthreads(n_threads$optim)
 # now do sampling is smallish chunks
-n_iter = 100;  # how many samples to collect at once?
+n_iter = 20;  # how many samples to collect at once?
 for(i  in 1:5) {
   print(sprintf('Run %d',i))
   MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)  # run MCMC chain n_samples iterations. grainSize is a paramter for parallelization (smaller = more parallelization)

@@ -289,3 +289,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// regression_sampler_v4
+double regression_sampler_v4(Map<MatrixXd> X, const ArrayXd& diag_XtX, Map<VectorXd> yCorr, Map<VectorXd> alpha, Map<VectorXd> beta, Map<VectorXd> delta, double& invVarRes, const ArrayXd& varEffects, double pi, double df, double scale);
+RcppExport SEXP _MegaLMM_regression_sampler_v4(SEXP XSEXP, SEXP diag_XtXSEXP, SEXP yCorrSEXP, SEXP alphaSEXP, SEXP betaSEXP, SEXP deltaSEXP, SEXP invVarResSEXP, SEXP varEffectsSEXP, SEXP piSEXP, SEXP dfSEXP, SEXP scaleSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Map<MatrixXd> >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const ArrayXd& >::type diag_XtX(diag_XtXSEXP);
+    Rcpp::traits::input_parameter< Map<VectorXd> >::type yCorr(yCorrSEXP);
+    Rcpp::traits::input_parameter< Map<VectorXd> >::type alpha(alphaSEXP);
+    Rcpp::traits::input_parameter< Map<VectorXd> >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< Map<VectorXd> >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< double& >::type invVarRes(invVarResSEXP);
+    Rcpp::traits::input_parameter< const ArrayXd& >::type varEffects(varEffectsSEXP);
+    Rcpp::traits::input_parameter< double >::type pi(piSEXP);
+    Rcpp::traits::input_parameter< double >::type df(dfSEXP);
+    Rcpp::traits::input_parameter< double >::type scale(scaleSEXP);
+    rcpp_result_gen = Rcpp::wrap(regression_sampler_v4(X, diag_XtX, yCorr, alpha, beta, delta, invVarRes, varEffects, pi, df, scale));
+    return rcpp_result_gen;
+END_RCPP
+}

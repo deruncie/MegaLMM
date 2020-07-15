@@ -3,10 +3,35 @@
 #include <iostream>
 #include "MegaLMM_types.h"
 
+
+
 using namespace Eigen;
 
+
 // [[Rcpp::export]]
-double regression_sampler_v4(  
+VectorXd add1d(Map<VectorXd> x) {
+  x += VectorXd::Ones(x.size());
+  return(x);
+}
+// [[Rcpp::export]]
+List add1f(VectorXf x) {
+  x += VectorXf::Ones(x.size());
+  // VectorXd xd(x.data())
+  return(List::create(Named("x") = x));
+  // return(x);
+}
+// [[Rcpp::export]]
+List add1f2(List x_) {
+  VectorXf x = as<VectorXf>(x_["x"]);
+  x += VectorXf::Ones(x.size());
+  // VectorXd xd(x.data())
+  return(List::create(Named("x") = x));
+  // return(x);
+}
+
+
+// [[Rcpp::export]]
+double regression_sampler_v4(
     Map<MatrixXd> X, // nxb
     const ArrayXd& diag_XtX, // bx1
     Map<VectorXd> yCorr, // nx1
@@ -27,7 +52,7 @@ double regression_sampler_v4(
   ArrayXd logVarEffects = varEffects.log();
   int nLoci         = 0;
   int nMarkers      = alpha.size();
-  
+
   // Sample beta = alpha*delta
   for(int j = 0; j < nMarkers; j++) {
     double rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
@@ -37,7 +62,7 @@ double regression_sampler_v4(
     double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
     double probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
     double oldAlpha = alpha[j];
-    
+
     double u = R::runif(0,1);
     double r = R::rnorm(0,1);
     if(u < probDelta1) {
@@ -49,20 +74,20 @@ double regression_sampler_v4(
     } else {
       if(oldAlpha != 0) {
         yCorr += X.col(j) * oldAlpha;
-      } 
+      }
       delta[j] = 0;
       beta[j] = r*sqrt(varEffects[j]);
       alpha[j] = 0;
     }
   }
-  
+
   // sample invVarRes
   invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
   return(invVarRes);
 }
 //   
 // 
-// VectorXd regression_sampler_v1(  // returns vector of length 1 + a + b for y_prec, alpha, beta, useful when b < n
+// VectorXd regression_sampler_v12(  // returns vector of length 1 + a + b for y_prec, alpha, beta, useful when b < n
 //     const Ref<const VectorXd>& y,           // nx1
 //     const MatrixXd& X1,           // nxa
 //     const MatrixXd& RinvtX2,                // nxb
@@ -108,14 +133,14 @@ double regression_sampler_v4(
 //     // Calculate A_alpha = Y_prec*X1^T*V_beta^{-1}*X1 + D_alpha^{-1}
 //     // We don't need to actually calculate V_beta^{-1} directly.
 //     // Instead,
-//     MatrixXd RinvtX1 = get_RinvtX2(chol_V,X1);  // n*n*a -> n x a
+//     MatrixXd RinvtX1 = get_RinvtX22(chol_V,X1);  // n*n*a -> n x a
 //     MatrixXd X1tVinvX2 = RinvtX1.transpose() * RinvtX2; // a*n*b -> a*b
 //     MatrixXd cholAbetainvt_X2tVinvX1 = chol_A_beta.transpose().triangularView<Lower>().solve(X1tVinvX2.transpose()); // b*b*a -> b x a
 //     
 //     MatrixXd A_alpha = RinvtX1.transpose() * RinvtX1 - cholAbetainvt_X2tVinvX1.transpose() * cholAbetainvt_X2tVinvX1;
 //     A_alpha.diagonal() += prior_prec_alpha;
 //     
-//     VectorXd Rinvsqy = get_RinvtX2(chol_V,y); // n*n*q -> n x 1;
+//     VectorXd Rinvsqy = get_RinvtX22(chol_V,y); // n*n*q -> n x 1;
 //     VectorXd XtRinvy = RinvtX2.transpose() * Rinvsqy; // b*n*1 >- b x 1
 //     VectorXd invSqAbXtRinvy = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy); // b*b*1 -> b*1
 //     
@@ -133,7 +158,7 @@ double regression_sampler_v4(
 //   
 //   // Step 2 - sample Y_prec
 //   // We don't need to actually calculate V_beta^{-1} directly.
-//   VectorXd RinvSqy = get_RinvtX2(chol_V,y_tilde);
+//   VectorXd RinvSqy = get_RinvtX22(chol_V,y_tilde);
 //   VectorXd XtRinvy = RinvtX2.transpose() * RinvSqy;
 //   VectorXd prod1 = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy);
 //   double score = Y_prec_b0 + (RinvSqy.dot(RinvSqy) - prod1.dot(prod1))/2;
@@ -237,7 +262,7 @@ double regression_sampler_v4(
 // // @param chol_V \code{R_matrix} object with the upper-triangular Cholesky decomposition of a square nxn matrix R
 // // @param X nxp matrix
 // // @return solve(t(R),X) as a dense matrix
-// MatrixXd get_RinvtX2(const R_matrix& chol_V, MatrixXd X){
+// MatrixXd get_RinvtX22(const R_matrix& chol_V, MatrixXd X){
 //   MatrixXd RinvtX2;
 //   if(chol_V.isDense) {
 //     RinvtX2 = chol_V.dense.transpose().triangularView<Lower>().solve(X);// * sqrt(tot_Eta_prec));
@@ -293,14 +318,14 @@ double regression_sampler_v4(
 //     // Calculate A_alpha = Y_prec*X1^T*V_beta^{-1}*X1 + D_alpha^{-1}
 //     // We don't need to actually calculate V_beta^{-1} directly.
 //     // Instead,
-//     MatrixXd RinvtX1 = get_RinvtX2(chol_V,X1);  // n*n*a -> n x a
+//     MatrixXd RinvtX1 = get_RinvtX22(chol_V,X1);  // n*n*a -> n x a
 //     MatrixXd X1tVinvX2 = RinvtX1.transpose() * RinvtX2; // a*n*b -> a*b
 //     MatrixXd cholAbetainvt_X2tVinvX1 = chol_A_beta.transpose().triangularView<Lower>().solve(X1tVinvX2.transpose()); // b*b*a -> b x a
 // 
 //     MatrixXd A_alpha = RinvtX1.transpose() * RinvtX1 - cholAbetainvt_X2tVinvX1.transpose() * cholAbetainvt_X2tVinvX1;
 //     A_alpha.diagonal() += prior_prec_alpha;
 // 
-//     VectorXd Rinvsqy = get_RinvtX2(chol_V,y); // n*n*q -> n x 1;
+//     VectorXd Rinvsqy = get_RinvtX22(chol_V,y); // n*n*q -> n x 1;
 //     VectorXd XtRinvy = RinvtX2.transpose() * Rinvsqy; // b*n*1 >- b x 1
 //     VectorXd invSqAbXtRinvy = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy); // b*b*1 -> b*1
 // 
@@ -318,7 +343,7 @@ double regression_sampler_v4(
 // 
 //   // Step 2 - sample Y_prec
 //   // We don't need to actually calculate V_beta^{-1} directly.
-//   VectorXd RinvSqy = get_RinvtX2(chol_V,y_tilde);
+//   VectorXd RinvSqy = get_RinvtX22(chol_V,y_tilde);
 //   VectorXd XtRinvy = RinvtX2.transpose() * RinvSqy;
 //   VectorXd prod1 = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy);
 //   double score = Y_prec_b0 + (RinvSqy.dot(RinvSqy) - prod1.dot(prod1))/2;
@@ -1009,9 +1034,9 @@ double regression_sampler_v4(
 //       MatrixXd RinvSqX, C, R, Rinv, RinvU, UtRinvU;
 //       R_matrix chol_R = chol_V_list[h2_index - 1];
 //       int which_sampler;
-//       // Decide which sampler to use
+//       // Decide which2 sampler to use
 //       if(b <= n) {
-//         // use regression_sampler_v1
+//         // use regression_sampler_v12
 //         which_sampler = 1;
 //         if(chol_R.isDense) {
 //           RinvSqX = chol_R.dense.transpose().triangularView<Lower>().solve(X);
@@ -1021,7 +1046,7 @@ double regression_sampler_v4(
 //         C = RinvSqX.transpose() * RinvSqX;
 //       }
 //       else if(V.cols() == 0) {
-//         // use regression_sampler_v2
+//         // use regression_sampler_v22
 //         which_sampler = 2;
 //         if(chol_R.isDense) {
 //           R = chol_R.dense.transpose().triangularView<Lower>() * chol_R.dense;
@@ -1076,12 +1101,12 @@ double regression_sampler_v4(
 //         VectorXd samples;
 //         if(which_sampler == 1) {
 //           b = RinvSqX.cols();
-//           // samples = regression_sampler_v1(Y.col(j), W, RinvSqX, C, prior_prec_alpha, prior_mean_beta.col(j),
+//           // samples = regression_sampler_v12(Y.col(j), W, RinvSqX, C, prior_prec_alpha, prior_mean_beta.col(j),
 //           //                                 prior_prec_beta.col(j), chol_R, Y_prec[j], randn_alpha,
 //           //                                 randn_beta.col(j), rgamma_1[j],Y_prec_b0);
 //         } else if(which_sampler == 2) {
 //           b = X.cols();
-//           // samples = regression_sampler_v2(Y.col(j), W, X, prior_prec_alpha, prior_mean_beta.col(j),
+//           // samples = regression_sampler_v22(Y.col(j), W, X, prior_prec_alpha, prior_mean_beta.col(j),
 //           //                                 prior_prec_beta.col(j), chol_R, R, Y_prec[j], randn_alpha,
 //           //                                 randn_beta.col(j), randn_e.col(j),rgamma_1[j],Y_prec_b0);
 //         } else if(which_sampler == 3) {

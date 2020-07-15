@@ -123,3 +123,7 @@ get_fitted_set_c <- function(model_matrices, coefs) {
     .Call(`_MegaLMM_get_fitted_set_c`, model_matrices, coefs)
 }
 
+regression_sampler_v4 <- function(X, diag_XtX, yCorr, alpha, beta, delta, invVarRes, varEffects, pi, df, scale) {
+    .Call(`_MegaLMM_regression_sampler_v4`, X, diag_XtX, yCorr, alpha, beta, delta, invVarRes, varEffects, pi, df, scale)
+}
+
