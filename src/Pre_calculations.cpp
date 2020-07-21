@@ -13,15 +13,15 @@ using namespace Eigen;
 // [[Rcpp::export()]]
 List LDLt(SEXP A_) {
   if(Rf_isMatrix(A_)){
-    Map<MatrixXd> A = as<Map<MatrixXd> >(A_);
-    Eigen::LDLT<MatrixXd> ldlt_A;
+    MatrixXf A = as<MatrixXf >(A_);
+    Eigen::LDLT<MatrixXf> ldlt_A;
     ldlt_A.compute(A);
-    MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
-    MatrixXd P = ldlt_A.transpositionsP() * I;
-    VectorXd d = ldlt_A.vectorD();
-    MatrixXd L = ldlt_A.matrixL();
+    MatrixXf I = MatrixXf::Identity(ldlt_A.rows(), ldlt_A.rows());
+    MatrixXf P = ldlt_A.transpositionsP() * I;
+    VectorXf d = ldlt_A.vectorD();
+    MatrixXf L = ldlt_A.matrixL();
     SpMat Lsp = L.sparseView();
-    if(static_cast<double>(Lsp.nonZeros()) / I.size() > 0.25) {
+    if(static_cast<float>(Lsp.nonZeros()) / I.size() > 0.25) {
       return(List::create(
           Named("P") = P.sparseView(),
           Named("L") = L,
@@ -35,11 +35,11 @@ List LDLt(SEXP A_) {
       ));
     }
   } else{
-    MSpMat A = as<MSpMat>(A_);
+    SpMat A = as<SpMat>(A_);
     Eigen::SimplicialLDLT<SpMat> ldlt_A;
     ldlt_A.compute(A);
-    MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
-    MatrixXd P = ldlt_A.permutationP() * I;
+    MatrixXf I = MatrixXf::Identity(ldlt_A.rows(), ldlt_A.rows());
+    MatrixXf P = ldlt_A.permutationP() * I;
     return(List::create(
         Named("P") = P.sparseView(),
         Named("L") = ldlt_A.matrixL(),
@@ -49,9 +49,9 @@ List LDLt(SEXP A_) {
 }
 
 
-SpMat make_chol_K_inv(const std::vector<R_matrix>& chol_Ki_mats, VectorXd h2s,double tol){
+SpMat make_chol_K_inv(const std::vector<General_Matrix_f>& chol_Ki_mats, VectorXf h2s,float tol){
   int h = h2s.size();
-  VectorXd sizes(h);
+  VectorXf sizes(h);
   int total_size = 0;
   for(int i = 0; i < h; i++){
     if(chol_Ki_mats[i].isDense) {
@@ -61,7 +61,7 @@ SpMat make_chol_K_inv(const std::vector<R_matrix>& chol_Ki_mats, VectorXd h2s,do
     }
     total_size += sizes(i);
   }
-  MatrixXd chol_K_inv_dense(total_size,total_size);
+  MatrixXf chol_K_inv_dense(total_size,total_size);
   chol_K_inv_dense.setZero();
   int curr_row = 0;
   int curr_col = 0;
@@ -70,7 +70,7 @@ SpMat make_chol_K_inv(const std::vector<R_matrix>& chol_Ki_mats, VectorXd h2s,do
       chol_K_inv_dense.block(curr_row,curr_col,sizes(i),sizes(i)).diagonal().setOnes();
       chol_K_inv_dense.block(curr_row,curr_col,sizes(i),sizes(i)).diagonal() /= 0;
     } else{
-      // MSpMat chol_Ki = chol_Ki_mats[i].sparse;
+      // SpMat chol_Ki = chol_Ki_mats[i].sparse;
       if(chol_Ki_mats[i].isDense) {
         chol_K_inv_dense.block(curr_row,curr_col,sizes(i),sizes(i)) = chol_Ki_mats[i].dense;
       } else{
@@ -87,16 +87,16 @@ SpMat make_chol_K_inv(const std::vector<R_matrix>& chol_Ki_mats, VectorXd h2s,do
 
 // [[Rcpp::export()]]
 Rcpp::List make_chol_ZtZ_Kinv_list(Rcpp::List chol_Ki_mats_,
-                                   Map<MatrixXd> h2s_matrix,
-                                   MSpMat ZtZ,
-                                   double drop0_tol,
+                                   MatrixXf h2s_matrix,
+                                   SpMat ZtZ,
+                                   float drop0_tol,
                                    SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
                                    int ncores) {
   int s = h2s_matrix.cols();
 
 
-  std::vector<R_matrix> chol_Ki_mats;
-  load_R_matrices_list(chol_Ki_mats_,chol_Ki_mats);
+  std::vector<General_Matrix_f> chol_Ki_mats;
+  load_General_Matrix_f_list(chol_Ki_mats_,chol_Ki_mats,true);
 
   std::vector<SpMat> chol_ZtZ_Kinv_list;
   chol_ZtZ_Kinv_list.reserve(s);
@@ -110,11 +110,11 @@ Rcpp::List make_chol_ZtZ_Kinv_list(Rcpp::List chol_Ki_mats_,
     int end = std::min(static_cast<double>(s),ncores*(i+1.0));
 
     for(std::size_t j = start; j < end; j++){
-      VectorXd h2s = h2s_matrix.col(j);
+      VectorXf h2s = h2s_matrix.col(j);
       SpMat chol_K_inv = make_chol_K_inv(chol_Ki_mats,h2s,drop0_tol);
-      MatrixXd ZtZ_Kinv = 1.0/(1.0 - h2s.sum()) * ZtZ + chol_K_inv.transpose() * chol_K_inv;
-      Eigen::LLT<MatrixXd> chol_ZtZ_Kinv(ZtZ_Kinv);
-      MatrixXd chol_ZtZ_Kinv_R = chol_ZtZ_Kinv.matrixU();
+      MatrixXf ZtZ_Kinv = 1.0/(1.0 - h2s.sum()) * ZtZ + chol_K_inv.transpose() * chol_K_inv;
+      Eigen::LLT<MatrixXf> chol_ZtZ_Kinv(ZtZ_Kinv);
+      MatrixXf chol_ZtZ_Kinv_R = chol_ZtZ_Kinv.matrixU();
       chol_ZtZ_Kinv_list[j] = chol_ZtZ_Kinv_R.sparseView(0,drop0_tol);
     }
     int pb_state = as<int>(getTxtProgressBar(pb));
@@ -130,18 +130,12 @@ Rcpp::List make_chol_ZtZ_Kinv_list(Rcpp::List chol_Ki_mats_,
 }
 
 
-SpMat make_chol_R(const std::vector<R_matrix>& ZKZts, const VectorXd h2s, const double tol){  //std::vector<Map<MatrixXd> > ZKZts
-  // Map<MatrixXd> ZKZts_0 = as<Map<MatrixXd> >(ZKZts[0]);
-  int n;
-  bool dense = false;
-  if(ZKZts[0].isDense) {
-    n = ZKZts[0].dense.rows();
-    dense = true;
-  } else{
-    n = ZKZts[0].sparse.rows();
-  }
+SpMat make_chol_R(const std::vector<General_Matrix_f>& ZKZts, const VectorXf h2s, const float tol){  
+  
+  int n = ZKZts[0].rows();
+  bool dense = ZKZts[0].isDense;
   int h = h2s.size();
-  MatrixXd Rd(n,n);
+  MatrixXf Rd(n,n);
   SpMat Rs(n,n);
   Rs.setZero();
   if(dense) {
@@ -164,8 +158,8 @@ SpMat make_chol_R(const std::vector<R_matrix>& ZKZts, const VectorXd h2s, const 
   }
   if(dense) {
     Rd.diagonal().array() += (1.0-h2s.sum());
-    Eigen::LLT<MatrixXd> chol_R(Rd);
-    MatrixXd chol_R_U = chol_R.matrixU();
+    Eigen::LLT<MatrixXf> chol_R(Rd);
+    MatrixXf chol_R_U = chol_R.matrixU();
     return chol_R_U.sparseView(0,tol);
   } else{
     for(int i = 0; i < n; i++){
@@ -173,7 +167,7 @@ SpMat make_chol_R(const std::vector<R_matrix>& ZKZts, const VectorXd h2s, const 
     }
     // diagonal().array() += (1.0-h2s.sum());
     Eigen::SimplicialLLT<SpMat,Lower,NaturalOrdering<int> > chol_R(Rs);
-    MatrixXd chol_R_U = chol_R.matrixU();
+    MatrixXf chol_R_U = chol_R.matrixU();
     return chol_R_U.sparseView(0,tol);
   }
 }
@@ -181,14 +175,14 @@ SpMat make_chol_R(const std::vector<R_matrix>& ZKZts, const VectorXd h2s, const 
 
 // [[Rcpp::export()]]
 Rcpp::List make_chol_V_list(Rcpp::List ZKZts_,
-                            Map<MatrixXd> h2s_matrix,
-                            double drop0_tol,
+                            MatrixXf h2s_matrix,
+                            float drop0_tol,
                             SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
                             int ncores) {
   int s = h2s_matrix.cols();
 
-  std::vector<R_matrix> ZKZts;
-  load_R_matrices_list(ZKZts_,ZKZts);
+  std::vector<General_Matrix_f> ZKZts;
+  load_General_Matrix_f_list(ZKZts_,ZKZts,false);
 
   std::vector<SpMat> chol_R_list;
   chol_R_list.reserve(s);

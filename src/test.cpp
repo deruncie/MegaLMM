@@ -1,90 +1,615 @@
+// #include <math.h>
+// #include <iostream>
+// #include "MegaLMM_types.h"
+// 
+// 
+// 
+// using namespace Eigen;
+// 
+// struct Cr {
+//   MatrixXf X;
+//   Cr(MatrixXf X_): X(X_){}
+//   MatrixXf times(MatrixXf Y);
+//   MatrixXf operator*(MatrixXf Y);
+// };
+// MatrixXf Cr::times(MatrixXf Y) {
+//   return(X*Y);
+// }
+// MatrixXf Cr::operator*(MatrixXf Y) {
+//   return(X*Y);
+// }
+// 
+// // [[Rcpp::export]]
+// MatrixXf test_times(MatrixXf X_, MatrixXf Y) {
+//   Cr X(X_);
+//   return(X.times(Y));
+// }
+// 
+// // [[Rcpp::export]]
+// MatrixXf test_times2(MatrixXf X_, MatrixXf Y) {
+//   Cr X(X_);
+//   return(X * Y);
+// }
+// 
+// // [[Rcpp::export]]
+// MatrixXf test_times3(MatrixXf X, MatrixXf Y) {
+//   return(X * Y);
+// }
+// 
+// // [[Rcpp::export]]
+// VectorXf regression_sampler_v4b(
+//     VectorXf y,
+//     MatrixXf& X1,
+//     MatrixXf& X2,
+//     ArrayXf& diag_X1tX1,
+//     ArrayXf& diag_X2tX2,
+//     VectorXf a,
+//     VectorXf alpha,
+//     VectorXf beta,
+//     VectorXi delta,
+//     float invVarRes,
+//     VectorXf invVarEffects, // bx1
+//     VectorXf pi,
+//     VectorXf randn_a,
+//     VectorXf randn_beta,
+//     VectorXf rand_unif,
+//     VectorXf rgamma_1,
+//     float Y_prec_b0,
+//     int nIter
+// ) {
+// 
+//   ArrayXf logPi = pi.array().log();
+//   ArrayXf logPiComp = (1.0 - pi.array()).log();
+//   ArrayXf logDelta0 = logPi;
+//   ArrayXf logVarEffects = invVarEffects.array().inverse().log();
+//   int nMarkers      = alpha.size();
+// 
+//   VectorXf yCorr = y - X1*a;
+//   for(int j = 0; j < nMarkers; j++) {
+//     if(delta[j] != 0) yCorr -= X2.col(j)*alpha[j];
+//   }
+// 
+//   for(int i = 0; i < nIter; i++) {
+// 
+//     // Sample a
+//     for(int j = 0; j < a.size(); j++) {
+//       float rhs = (X1.col(j).dot(yCorr) + diag_X1tX1[j]*a[j])*invVarRes;
+//       float lhs = diag_X1tX1[j]*invVarRes;
+//       float invLhs = 1.0/lhs;
+//       float gHat = rhs * invLhs;
+//       float old_a = a[j];
+//       a[j] = gHat + randn_a(i*a.size() + j)*sqrt(invLhs);
+//       yCorr += X1.col(j) * (old_a - a[j]);
+//     }
+// 
+//     int nLoci         = 0;
+//     // Sample beta = alpha*delta
+//     for(int j = 0; j < nMarkers; j++) {
+//       float rhs = (X2.col(j).dot(yCorr) + diag_X2tX2[j]*alpha[j])*invVarRes;
+//       float lhs = diag_X2tX2[j]*invVarRes + invVarEffects[j];
+//       float invLhs = 1.0/lhs;
+//       float gHat = rhs * invLhs;
+//       float logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp[j];
+//       float probDelta1 = 1.0 / (1.0 + exp(logDelta0[j] - logDelta1));
+//       float oldAlpha = alpha[j];
+// 
+//       float u = rand_unif(i*nMarkers + j);
+//       float r = randn_beta(i*nMarkers + j);
+//       if(u < probDelta1) {
+//         delta[j] = 1.0;
+//         beta[j] = gHat + r*sqrt(invLhs);
+//         alpha[j] = beta[j];
+//         yCorr += X2.col(j) * (oldAlpha - alpha[j]);
+//         nLoci++;
+//       } else {
+//         if(oldAlpha != 0) {
+//           yCorr += X2.col(j) * oldAlpha;
+//         }
+//         delta[j] = 0;
+//         beta[j] = r/sqrt(invVarEffects[j]);
+//         alpha[j] = 0;
+//       }
+//     }
+//     invVarRes = rgamma_1[i]/(yCorr.dot(yCorr)/2.0 + Y_prec_b0);
+//   }
+//   VectorXf result(1+a.size() + 3*nMarkers);
+//   result << invVarRes,a,alpha,beta,delta.cast<float>();
+//   return(result);
+// }
+// void test_regression_sampler_parallel(
+//   int which_sampler,        //
+//   MatrixXf Y,               //
+//   MatrixXf X1_base,          //
+//   Rcpp::List X1_list_,             // p-list of n x a2 matrices of X1 covariates unique to each p. Can be NULL
+//   SEXP X2_,               // either X2, a n x b matrix, or Ux, a n x m matrix. If Ux, then V must be non-NULL
+//   SEXP Vx_,                       // m x b matrix if X2 is Ux
+//   Rcpp::IntegerVector h2s_index, // p-vector of indices for appropriate V of each trait
+//   Rcpp::List chol_V_list_,        // list of cholesky decompositions of V: RtR (each nxn). Can be either dense or sparse
+//   VectorXf Y_prec,               // p-vector of Y current precisions
+//   VectorXf Y_prec_a0,
+//   VectorXf Y_prec_b0,
+//   MatrixXf prior_prec_alpha1, // a1 x p matrix of prior precisions for alpha1
+//   VectorXf prior_prec_alpha2, // a1 x p matrix of prior precisions for alpha1
+//   MatrixXf prior_mean_beta, // b x p matrix of prior means of beta
+//   MatrixXf prior_prec_beta, // b x p matrix of prior precisions of beta
+//   SEXP current_alpha1s_,
+//   SEXP current_alpha2s_,
+//   SEXP current_betas_,    // p-list of a2 x 1 vectors
+//   Rcpp::List BayesAlphabet_parms
+// )
+// {
+//   Rcout << "asdf" << std::endl;
+//   // 
+//   
+// }
 
-#include <math.h>
-#include <iostream>
-#include "MegaLMM_types.h"
-
-
-
-using namespace Eigen;
-
-
-// [[Rcpp::export]]
-VectorXd add1d(Map<VectorXd> x) {
-  x += VectorXd::Ones(x.size());
-  return(x);
-}
-// [[Rcpp::export]]
-List add1f(VectorXf x) {
-  x += VectorXf::Ones(x.size());
-  // VectorXd xd(x.data())
-  return(List::create(Named("x") = x));
-  // return(x);
-}
-// [[Rcpp::export]]
-List add1f2(List x_) {
-  VectorXf x = as<VectorXf>(x_["x"]);
-  x += VectorXf::Ones(x.size());
-  // VectorXd xd(x.data())
-  return(List::create(Named("x") = x));
-  // return(x);
-}
-
-
-// [[Rcpp::export]]
-double regression_sampler_v4(
-    Map<MatrixXd> X, // nxb
-    const ArrayXd& diag_XtX, // bx1
-    Map<VectorXd> yCorr, // nx1
-    Map<VectorXd> alpha, // bx1
-    Map<VectorXd> beta, // bx1
-    Map<VectorXd> delta, // bx1
-    double&  invVarRes,
-    const ArrayXd& varEffects, // bx1
-    double pi,
-    double df,
-    double scale
-) {
-  double logPi         = log(pi);
-  double logPiComp     = log(1.0-pi);
-  double logDelta0     = logPi;
-  // double invVarRes     = 1.0 / vare;
-  ArrayXd invVarEffects = varEffects.inverse();
-  ArrayXd logVarEffects = varEffects.log();
-  int nLoci         = 0;
-  int nMarkers      = alpha.size();
-
-  // Sample beta = alpha*delta
-  for(int j = 0; j < nMarkers; j++) {
-    double rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
-    double lhs = diag_XtX[j]*invVarRes + invVarEffects[j];
-    double invLhs = 1.0/lhs;
-    double gHat = rhs * invLhs;
-    double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
-    double probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
-    double oldAlpha = alpha[j];
-
-    double u = R::runif(0,1);
-    double r = R::rnorm(0,1);
-    if(u < probDelta1) {
-      delta[j] = 1.0;
-      beta[j] = gHat + r*sqrt(invLhs);
-      alpha[j] = beta[j];
-      yCorr += X.col(j) * (oldAlpha - alpha[j]);
-      nLoci++;
-    } else {
-      if(oldAlpha != 0) {
-        yCorr += X.col(j) * oldAlpha;
-      }
-      delta[j] = 0;
-      beta[j] = r*sqrt(varEffects[j]);
-      alpha[j] = 0;
-    }
-  }
-
+// 
+// 
+// // [[Rcpp::export]]
+// VectorXd add1d(Map<VectorXd> x) {
+//   x += VectorXd::Ones(x.size());
+//   return(x);
+// }
+// // [[Rcpp::export]]
+// List add1f(VectorXf x) {
+//   x += VectorXf::Ones(x.size());
+//   // VectorXd xd(x.data())
+//   return(List::create(Named("x") = x));
+//   // return(x);
+// }
+// // [[Rcpp::export]]
+// List add1f2(List x_) {
+//   VectorXf x = as<VectorXf>(x_["x"]);
+//   x += VectorXf::Ones(x.size());
+//   // VectorXd xd(x.data())
+//   return(List::create(Named("x") = x));
+//   // return(x);
+// }
+// 
+// 
+// // [[Rcpp::export]]
+// double regression_sampler_v4(
+//     Map<MatrixXd> X, // nxb
+//     const ArrayXd& diag_XtX, // bx1
+//     Map<VectorXd> yCorr, // nx1
+//     Map<VectorXd> alpha, // bx1
+//     Map<VectorXd> beta, // bx1
+//     Map<VectorXd> delta, // bx1
+//     double&  invVarRes,
+//     const ArrayXd& varEffects, // bx1
+//     double pi,
+//     double df,
+//     double scale
+// ) {
+//   double logPi         = log(pi);
+//   double logPiComp     = log(1.0-pi);
+//   double logDelta0     = logPi;
+//   // double invVarRes     = 1.0 / vare;
+//   ArrayXd invVarEffects = varEffects.inverse();
+//   ArrayXd logVarEffects = varEffects.log();
+//   int nLoci         = 0;
+//   int nMarkers      = alpha.size();
+// 
+//   // Sample beta = alpha*delta
+//   for(int j = 0; j < nMarkers; j++) {
+//     double rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
+//     double lhs = diag_XtX[j]*invVarRes + invVarEffects[j];
+//     double invLhs = 1.0/lhs;
+//     double gHat = rhs * invLhs;
+//     double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
+//     double probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
+//     double oldAlpha = alpha[j];
+// 
+//     double u = R::runif(0,1);
+//     double r = R::rnorm(0,1);
+//     if(u < probDelta1) {
+//       delta[j] = 1.0;
+//       beta[j] = gHat + r*sqrt(invLhs);
+//       alpha[j] = beta[j];
+//       yCorr += X.col(j) * (oldAlpha - alpha[j]);
+//       nLoci++;
+//     } else {
+//       if(oldAlpha != 0) {
+//         yCorr += X.col(j) * oldAlpha;
+//       }
+//       delta[j] = 0;
+//       beta[j] = r*sqrt(varEffects[j]);
+//       alpha[j] = 0;
+//     }
+//   }
+// 
+//   // sample invVarRes
+//   invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
+//   return(invVarRes);
+// }
+// 
+// 
+// // [[Rcpp::export]]
+// float regression_sampler_v4b(
+//     MatrixXf X, // nxb
+//     const ArrayXf& diag_XtX, // bx1
+//     VectorXf yCorr, // nx1
+//     VectorXf alpha, // bx1
+//     VectorXf beta, // bx1
+//     VectorXf delta, // bx1
+//     float&  invVarRes,
+//     const ArrayXf& varEffects, // bx1
+//     float pi,
+//     float df,
+//     float scale
+// ) {
+//   float logPi         = log(pi);
+//   float logPiComp     = log(1.0-pi);
+//   float logDelta0     = logPi;
+//   // float invVarRes     = 1.0 / vare;
+//   ArrayXf invVarEffects = varEffects.inverse();
+//   ArrayXf logVarEffects = varEffects.log();
+//   int nLoci         = 0;
+//   int nMarkers      = alpha.size();
+//   
+//   // Sample beta = alpha*delta
+//   for(int j = 0; j < nMarkers; j++) {
+//     float rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
+//     float lhs = diag_XtX[j]*invVarRes + invVarEffects[j];
+//     float invLhs = 1.0/lhs;
+//     float gHat = rhs * invLhs;
+//     float logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
+//     float probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
+//     float oldAlpha = alpha[j];
+//     
+//     float u = R::runif(0,1);
+//     float r = R::rnorm(0,1);
+//     if(u < probDelta1) {
+//       delta[j] = 1.0;
+//       beta[j] = gHat + r*sqrt(invLhs);
+//       alpha[j] = beta[j];
+//       yCorr += X.col(j) * (oldAlpha - alpha[j]);
+//       nLoci++;
+//     } else {
+//       if(oldAlpha != 0) {
+//         yCorr += X.col(j) * oldAlpha;
+//       }
+//       delta[j] = 0;
+//       beta[j] = r*sqrt(varEffects[j]);
+//       alpha[j] = 0;
+//     }
+//   }
+//   
+//   // sample invVarRes
+//   invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
+//   return(invVarRes);
+// }
+// 
+// 
+// 
+// 
+// // [[Rcpp::export]]
+// double regression_sampler_v4c(
+//     Map<MatrixXd> X, // nxb
+//     const ArrayXd& diag_XtX, // bx1
+//     Map<VectorXd> y, // nx1
+//     Map<VectorXd> alpha, // bx1
+//     Map<VectorXd> beta, // bx1
+//     Map<VectorXd> delta, // bx1
+//     double&  invVarRes,
+//     const ArrayXd& varEffects, // bx1
+//     double pi,
+//     double df,
+//     double scale
+// ) {
+//   double logPi         = log(pi);
+//   double logPiComp     = log(1.0-pi);
+//   double logDelta0     = logPi;
+//   // double invVarRes     = 1.0 / vare;
+//   ArrayXd invVarEffects = varEffects.inverse();
+//   ArrayXd logVarEffects = varEffects.log();
+//   int nLoci         = 0;
+//   int nMarkers      = alpha.size();
+//   
+//   VectorXd yCorr = y - X*alpha;
+//   
+//   // Sample beta = alpha*delta
+//   for(int j = 0; j < nMarkers; j++) {
+//     double rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
+//     double lhs = diag_XtX[j]*invVarRes + invVarEffects[j];
+//     double invLhs = 1.0/lhs;
+//     double gHat = rhs * invLhs;
+//     double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
+//     double probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
+//     double oldAlpha = alpha[j];
+//     
+//     double u = R::runif(0,1);
+//     double r = R::rnorm(0,1);
+//     if(u < probDelta1) {
+//       delta[j] = 1.0;
+//       beta[j] = gHat + r*sqrt(invLhs);
+//       alpha[j] = beta[j];
+//       yCorr += X.col(j) * (oldAlpha - alpha[j]);
+//       nLoci++;
+//     } else {
+//       if(oldAlpha != 0) {
+//         yCorr += X.col(j) * oldAlpha;
+//       }
+//       delta[j] = 0;
+//       beta[j] = r*sqrt(varEffects[j]);
+//       alpha[j] = 0;
+//     }
+//   }
+//   
+//   // sample invVarRes
+//   invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
+//   return(invVarRes);
+// }
+// 
+// 
+// // [[Rcpp::export]]
+// VectorXf regression_sampler_v5(
+//     VectorXf& y,
+//     MatrixXf& X1,
+//     MatrixXf& X2,
+//     ArrayXf& diag_X1tX1,
+//     ArrayXf& diag_X2tX2,
+//     VectorXf& a,
+//     VectorXf& alpha,
+//     VectorXf& beta,
+//     VectorXi& delta,
+//     float invVarRes,
+//     const ArrayXf& invVarEffects, // bx1
+//     const ArrayXf& pi,
+//     MatrixXf& randn_a,
+//     MatrixXf& randn_beta,
+//     MatrixXf& rand_unif,
+//     VectorXf& rgamma_1,
+//     float Y_prec_b0,
+//     int nIter
+// ) {
+//   
+//   ArrayXf logPi = pi.log();
+//   ArrayXf logPiComp = (1.0 - pi).log();
+//   ArrayXf logDelta0 = logPi;
+//   ArrayXf logVarEffects = invVarEffects.inverse().log();
+//   int nMarkers      = alpha.size();
+//   
+//   VectorXf yCorr = y - X1*a;
+//   for(int j = 0; j < nMarkers; j++) {
+//     if(delta[j] != 0) yCorr -= X2.col(j)*alpha[j];
+//   }
+//   
+//   for(int i = 0; i < nIter; i++) {
+//     
+//     // Sample a
+//     for(int j = 0; j < a.size(); j++) {
+//       float rhs = (X1.col(j).dot(yCorr) + diag_X1tX1[j]*a[j])*invVarRes;
+//       float lhs = diag_X1tX1[j]*invVarRes;
+//       float invLhs = 1.0/lhs;
+//       float gHat = rhs * invLhs;
+//       float old_a = a[j];
+//       a[j] = gHat + randn_a(j,i)*sqrt(invLhs);
+//       yCorr += X1.col(j) * (old_a - a[j]);
+//     }
+//     
+//     int nLoci         = 0;
+//     // Sample beta = alpha*delta
+//     for(int j = 0; j < nMarkers; j++) {
+//       float rhs = (X2.col(j).dot(yCorr) + diag_X2tX2[j]*alpha[j])*invVarRes;
+//       float lhs = diag_X2tX2[j]*invVarRes + invVarEffects[j];
+//       float invLhs = 1.0/lhs;
+//       float gHat = rhs * invLhs;
+//       float logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp[j];
+//       float probDelta1 = 1.0 / (1.0 + exp(logDelta0[j] - logDelta1));
+//       float oldAlpha = alpha[j];
+//       
+//       float u = rand_unif(j,i);
+//       float r = randn_beta(j,i);
+//       if(u < probDelta1) {
+//         delta[j] = 1.0;
+//         beta[j] = gHat + r*sqrt(invLhs);
+//         alpha[j] = beta[j];
+//         yCorr += X2.col(j) * (oldAlpha - alpha[j]);
+//         nLoci++;
+//       } else {
+//         if(oldAlpha != 0) {
+//           yCorr += X2.col(j) * oldAlpha;
+//         }
+//         delta[j] = 0;
+//         beta[j] = r/sqrt(invVarEffects[j]);
+//         alpha[j] = 0;
+//       }
+//     }
+//     invVarRes = rgamma_1[i]/(yCorr.dot(yCorr)/2.0 + Y_prec_b0);
+//   }
+//   VectorXf result(1+a.size() + 3*nMarkers);
+//   result << invVarRes,a,alpha,beta,delta.cast<float>();
+//   return(result);
+// }
+// 
+// // [[Rcpp::export]]
+// VectorXd regression_sampler_v5b(
+//     Map<VectorXd> y,
+//     Map<MatrixXd> X1,
+//     Map<MatrixXd> X2,
+//     ArrayXd& diag_X1tX1,
+//     ArrayXd& diag_X2tX2,
+//     Map<VectorXd> a,
+//     Map<VectorXd> alpha,
+//     Map<VectorXd> beta,
+//     VectorXi& delta,
+//     double invVarRes,
+//     const ArrayXd& invVarEffects, // bx1
+//     const ArrayXd& pi,
+//     Map<MatrixXd> randn_a,
+//     Map<MatrixXd> randn_beta,
+//     Map<MatrixXd> rand_unif,
+//     Map<VectorXd> rgamma_1,
+//     double Y_prec_b0,
+//     int nIter
+// ) {
+//   
+//   ArrayXd logPi = pi.log();
+//   ArrayXd logPiComp = (1.0 - pi).log();
+//   ArrayXd logDelta0 = logPi;
+//   ArrayXd logVarEffects = invVarEffects.inverse().log();
+//   int nMarkers      = alpha.size();
+//   
+//   VectorXd yCorr = y - X1*a - X2*alpha;
+//   
+//   for(int i = 0; i < nIter; i++) {
+//     
+//     // Sample a
+//     for(int j = 0; j < a.size(); j++) {
+//       double rhs = (X1.col(j).dot(yCorr) + diag_X1tX1[j]*a[j])*invVarRes;
+//       double lhs = diag_X1tX1[j]*invVarRes;
+//       double invLhs = 1.0/lhs;
+//       double gHat = rhs * invLhs;
+//       double old_a = a[j];
+//       a[j] = gHat + randn_a(j,i)*sqrt(invLhs);
+//       yCorr += X1.col(j) * (old_a - a[j]);
+//     }
+//     
+//     int nLoci         = 0;
+//     // Sample beta = alpha*delta
+//     for(int j = 0; j < nMarkers; j++) {
+//       double rhs = (X2.col(j).dot(yCorr) + diag_X2tX2[j]*alpha[j])*invVarRes;
+//       double lhs = diag_X2tX2[j]*invVarRes + invVarEffects[j];
+//       double invLhs = 1.0/lhs;
+//       double gHat = rhs * invLhs;
+//       double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp[j];
+//       double probDelta1 = 1.0 / (1.0 + exp(logDelta0[j] - logDelta1));
+//       double oldAlpha = alpha[j];
+//       
+//       double u = rand_unif(j,i);
+//       double r = randn_beta(j,i);
+//       if(u < probDelta1) {
+//         delta[j] = 1.0;
+//         beta[j] = gHat + r*sqrt(invLhs);
+//         alpha[j] = beta[j];
+//         yCorr += X2.col(j) * (oldAlpha - alpha[j]);
+//         nLoci++;
+//       } else {
+//         if(oldAlpha != 0) {
+//           yCorr += X2.col(j) * oldAlpha;
+//         }
+//         delta[j] = 0;
+//         beta[j] = r/sqrt(invVarEffects[j]);
+//         alpha[j] = 0;
+//       }
+//     }
+//     invVarRes = rgamma_1[i]/(yCorr.dot(yCorr)/2.0 + Y_prec_b0);
+//   }
+//   VectorXd result(1+a.size() + 3*nMarkers);
+//   result << invVarRes,a,alpha,beta,delta.cast<double>();
+//   return(result);
+// }
+// 
+// // [[Rcpp::export]]
+// VectorXd regression_sampler_v5c(
+//     Map<VectorXd> y,
+//     Map<MatrixXd> X1,
+//     Map<MatrixXd> X2,
+//     ArrayXd& diag_X1tX1,
+//     ArrayXd& diag_X2tX2,
+//     Map<VectorXd> a,
+//     Map<VectorXd> alpha,
+//     Map<VectorXd> beta,
+//     VectorXi& delta,
+//     double invVarRes,
+//     const ArrayXd& invVarEffects, // bx1
+//     const ArrayXd& pi,
+//     Map<VectorXd> rgamma_1,
+//     double Y_prec_b0,
+//     int nIter
+// ) {
+//   
+//   ArrayXd logPi = pi.log();
+//   ArrayXd logPiComp = (1.0 - pi).log();
+//   ArrayXd logDelta0 = logPi;
+//   ArrayXd logVarEffects = invVarEffects.inverse().log();
+//   int nMarkers      = alpha.size();
+//   
+//   VectorXd yCorr = y - X1*a - X2*alpha;
+//   
+//   for(int i = 0; i < nIter; i++) {
+//     
+//     // Sample a
+//     for(int j = 0; j < a.size(); j++) {
+//       double rhs = (X1.col(j).dot(yCorr) + diag_X1tX1[j]*a[j])*invVarRes;
+//       double lhs = diag_X1tX1[j]*invVarRes;
+//       double invLhs = 1.0/lhs;
+//       double gHat = rhs * invLhs;
+//       double old_a = a[j];
+//       a[j] = gHat + R::rnorm(0,1)*sqrt(invLhs);
+//       yCorr += X1.col(j) * (old_a - a[j]);
+//     }
+//     
+//     int nLoci         = 0;
+//     // Sample beta = alpha*delta
+//     for(int j = 0; j < nMarkers; j++) {
+//       double rhs = (X2.col(j).dot(yCorr) + diag_X2tX2[j]*alpha[j])*invVarRes;
+//       double lhs = diag_X2tX2[j]*invVarRes + invVarEffects[j];
+//       double invLhs = 1.0/lhs;
+//       double gHat = rhs * invLhs;
+//       double logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp[j];
+//       double probDelta1 = 1.0 / (1.0 + exp(logDelta0[j] - logDelta1));
+//       double oldAlpha = alpha[j];
+//       
+//       double u =  R::runif(0,1);
+//       double r = R::rnorm(0,1);
+//       if(u < probDelta1) {
+//         delta[j] = 1.0;
+//         beta[j] = gHat + r*sqrt(invLhs);
+//         alpha[j] = beta[j];
+//         yCorr += X2.col(j) * (oldAlpha - alpha[j]);
+//         nLoci++;
+//       } else {
+//         if(oldAlpha != 0) {
+//           yCorr += X2.col(j) * oldAlpha;
+//         }
+//         delta[j] = 0;
+//         beta[j] = r/sqrt(invVarEffects[j]);
+//         alpha[j] = 0;
+//       }
+//     }
+//     invVarRes = rgamma_1[i]/(yCorr.dot(yCorr)/2.0 + Y_prec_b0);
+//   }
+//   VectorXd result(1+a.size() + 3*nMarkers);
+//   result << invVarRes,a,alpha,beta,delta.cast<double>();
+//   return(result);
+// }
+                            
+  
+  // // Sample beta = alpha*delta
+  // for(int j = 0; j < nMarkers; j++) {
+  //   float rhs = (X.col(j).dot(yCorr) + diag_XtX[j]*alpha[j])*invVarRes;
+  //   float lhs = diag_XtX[j]*invVarRes + invVarEffects[j];
+  //   float invLhs = 1.0/lhs;
+  //   float gHat = rhs * invLhs;
+  //   float logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp;
+  //   float probDelta1 = 1.0 / (1.0 + exp(logDelta0 - logDelta1));
+  //   float oldAlpha = alpha[j];
+    
+    // float u = R::runif(0,1);
+    // float r = R::rnorm(0,1);
+  //   if(u < probDelta1) {
+  //     delta[j] = 1.0;
+  //     beta[j] = gHat + r*sqrt(invLhs);
+  //     alpha[j] = beta[j];
+  //     yCorr += X.col(j) * (oldAlpha - alpha[j]);
+  //     nLoci++;
+  //   } else {
+  //     if(oldAlpha != 0) {
+  //       yCorr += X.col(j) * oldAlpha;
+  //     }
+  //     delta[j] = 0;
+  //     beta[j] = r*sqrt(varEffects[j]);
+  //     alpha[j] = 0;
+  //   }
+  // }
+  
   // sample invVarRes
-  invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
-  return(invVarRes);
-}
+//   invVarRes = 1.0 / ((yCorr.dot(yCorr) + df*scale)/R::rchisq(yCorr.size()));
+//   return(invVarRes);
+// }
+
 //   
 // 
 // VectorXd regression_sampler_v12(  // returns vector of length 1 + a + b for y_prec, alpha, beta, useful when b < n

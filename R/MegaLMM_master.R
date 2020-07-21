@@ -41,6 +41,8 @@
 #' @seealso \code{\link{MegaLMM_init}}, \code{\link{sample_MegaLMM}}, \code{\link{print.MegaLMM_state}}
 #'
 MegaLMM_control = function(
+                        which_sampler = list(Y = 1,F = 1),
+                        BayesAlphabet_priors = list(Y = FALSE,F = FALSE),
                         scale_Y = c(T,F),
                         K = 20, h2_divisions = 100, h2_step_size = NULL,
                         drop0_tol = 1e-14, K_eigen_tol = 1e-10,
@@ -51,10 +53,14 @@ MegaLMM_control = function(
                         save_current_state = TRUE,
                         ...
                         ) {
-
   formals_named = formals()
   formals_named = formals_named[names(formals_named) != '...']
-  all_args = lapply(formals_named,function(x) eval(x)[1])
+  all_args = lapply(formals_named,function(x) {
+    if(!is.list(eval(x))) {
+      eval(x)[1]
+    } else {
+      eval(x)
+    }})
   passed_args = lapply(as.list(match.call())[-1],eval)
   if(any(names(passed_args) %in% names(formals_named) == F)){
     unused_names = names(passed_args)[names(passed_args) %in% names(formals_named) == F]
@@ -308,7 +314,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   }
   if(!nrow(X2_F) == n) stop("Wrong dimension of X2_F")
   if(!nrow(X2_R) == n) stop("Wrong dimension of X2_R")
-
+  
   # -------- cis genotypes ---------- #
   if(is.null(cis_genotypes)){
     cis_genotypes = list()
@@ -805,6 +811,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
   Qt_list = list()
   # QtZL_list = list()
   QtX1_list = list()
+  QtX1_keepColumns_list = list()
   QtX2_R_list = list()
   Qt_cis_genotypes = list()
 
@@ -858,9 +865,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     }
 
     Qt_list[[set]]   = Qt
-    QtX1_list[[set]] = list( X1 = QtX1_set,
-                             keepColumns = QtX1_keepColumns
-                            )
+    QtX1_list[[set]] = QtX1_set
+    QtX1_keepColumns_list[[set]] = QtX1_keepColumns
     QtX2_R_list[[set]]  = QtX2_R_set
 
     ZKZts_set = list()
@@ -905,6 +911,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     Qt_list    = Qt_list,
     # QtZL_list   = QtZL_list,
     QtX1_list   = QtX1_list,
+    QtX1_keepColumns_list = QtX1_keepColumns_list,
     QtX2_R_list = QtX2_R_list,
     Qt1_U2_F = Qt1_U2_F,
     Qt1_X2_F = Qt1_X2_F,

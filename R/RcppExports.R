@@ -60,11 +60,18 @@ find_candidate_states <- function(h2s_matrix, step_size, old_state) {
 #' Where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
 #' Each column of Y is considered independent
 #'
+#' @param which_sampler int: \itemize{
+#'   \item 1: block sampler: b < n
+#'   \item 2: block sampler: n >= b and X doesn't factorize
+#'   \item 3: block sampler: n >= b, but X factorizes into UxVx where Ux is n x m and Vx = m x b, and m << n <= b
+#' }
 #' @param Y n x p matrix of observations
 #' @param X1_base n x a1 matrix of X1 covariates common to all p. Can be NULL
 #' @param X1_list_ p-list of n x a2 matrices of X1 covariates unique to each p. Can be NULL
 #' @param X2 either X2, a n x b matrix, or Ux, a n x m matrix. If Ux, then V must be non-NULL
 #' @param V_ m x b matrix if X2 is Ux, otherwise NULL
+#' @param beta1_list_ p-list of a2-vectors for X1 coefficients. Can be NULL
+#' @param beta2 a b x p matrix of current values for beta
 #' @param h2s_index p-vector of indices for to select appropriate V of each trait
 #' @param chol_V_list_ list of cholesky decompositions of V: RtR (each nxn). Can be either dense or sparse
 #' @param Y_prec p-vector of Y current precisions
@@ -73,14 +80,19 @@ find_candidate_states <- function(h2s_matrix, step_size, old_state) {
 #' @param prior_prec_alpha2 p-vector of precision of alpha2s for each trait
 #' @param prior_mean_beta b x p matrix of prior means of beta
 #' @param prior_prec_beta b x p matrix of prior precisions of beta
+#' @param beta2_alpha_ b x p matrix for BayesC priors for beta2. Can be NULL
+#' @param beta2_delta_ b x p matrix for BayesC priors for beta2. Can be NULL,
+#' @param beta2_p_i_ b x p matrix for BayesC priors for beta2. Can be NULL
 #' @return List with elements: \itemize{
 #'   \item alpha1 a1 x p matrix of alpha1
 #'   \item alpha2 concatenated vector of alpha2 for all traits
 #'   \item beta b x p matrix of beta
 #'   \item Y_prec p x 1 vector of Y_prec
+#'   \item beta2_alpha b x p matrix (optional)
+#'   \item beta2_delta_ b x p matrix (optional)
 #' }
-regression_sampler_parallel <- function(Y, X1_base, X1_list_, X2, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta) {
-    .Call(`_MegaLMM_regression_sampler_parallel`, Y, X1_base, X1_list_, X2, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta)
+regression_sampler_parallel <- function(which_sampler, Y, X1_base, X1_list_, X2_, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta, current_alpha1s_, current_alpha2s_, current_betas_, BayesAlphabet_parms) {
+    .Call(`_MegaLMM_regression_sampler_parallel`, which_sampler, Y, X1_base, X1_list_, X2_, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta, current_alpha1s_, current_alpha2s_, current_betas_, BayesAlphabet_parms)
 }
 
 sample_MME_ZKZts_c <- function(Y, Z_, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index) {
@@ -121,9 +133,5 @@ sample_coefs_set_c <- function(model_matrices, prior_mean, prior_prec) {
 
 get_fitted_set_c <- function(model_matrices, coefs) {
     .Call(`_MegaLMM_get_fitted_set_c`, model_matrices, coefs)
-}
-
-regression_sampler_v4 <- function(X, diag_XtX, yCorr, alpha, beta, delta, invVarRes, varEffects, pi, df, scale) {
-    .Call(`_MegaLMM_regression_sampler_v4`, X, diag_XtX, yCorr, alpha, beta, delta, invVarRes, varEffects, pi, df, scale)
 }
 

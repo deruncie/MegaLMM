@@ -22,7 +22,7 @@ It can be skipped if you are loading your own data in a different way
 
 ```{r}
 seed = 1  # for reproducibility
-nSire = 1000 # simulation design is a half-sib design: each of nSire fathers has nRep children, each with a different female
+nSire = 50 # simulation design is a half-sib design: each of nSire fathers has nRep children, each with a different female
 nRep = 10
 nTraits = 1000
 nFixedEffects = 2 # fixed effects are effects on the factors
