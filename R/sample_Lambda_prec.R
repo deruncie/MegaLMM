@@ -20,7 +20,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
   current_state = with(c(priors,run_variables,run_parameters),
                        with(Lambda_prior,{
                          if(which_sampler$Y == 4) stop("Y sampler must be 1-3 for the horseshoe Lambda prior")
-
+                         
                          if(!exists('delta_iterations_factor')) delta_iterations_factor = 100
 
                          delta_shape = delta$shape
@@ -160,6 +160,7 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
                          if(!which_sampler$Y == 4) stop("Y sampler must be 4 for the BayesC Lambda prior")
                          
                          if(!exists('delta_iterations_factor')) delta_iterations_factor = 100
+                         if(!exists('fixed_pi')) fixed_pi = NULL
                          
                          
                          delta_1_shape = delta_1$shape
@@ -188,7 +189,11 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
                              varEffects = 1
                            } else{
                              nLoci = rowSums(Lambda_delta)
-                             Lambda_pi = matrix(rbeta(Kr,p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
+                             if(is.null(fixed_pi)) {
+                              Lambda_pi = matrix(rbeta(Kr,p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
+                             } else{
+                               Lambda_pi = matrix(fixed_pi,nrow = Kr, ncol = 1)
+                             }
                              
                              Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
                              # varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)

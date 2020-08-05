@@ -87,6 +87,7 @@ sample_B2_prec_BayesC = function(MegaLMM_state,...) {
                        with(B2_prior,{
                          if(b2_R>0 & !which_sampler$Y == 4) stop("Y sampler must be 4 for the BayesC B2_R prior")
                          if(b2_F>0 & !which_sampler$F == 4) stop("Y sampler must be 4 for the BayesC B2_F prior")
+                         if(!exists('fixed_pi')) fixed_pi = NULL
                          
                          within(current_state,{
                            
@@ -107,13 +108,21 @@ sample_B2_prec_BayesC = function(MegaLMM_state,...) {
                            } else {    
                              if(b2_R > 0) {
                                nLoci = colSums(B2_R_delta)
-                               B2_R_pi = matrix(rbeta(p,b2_R-nLoci+1,nLoci+1),nrow = 1,ncol = p,byrow = TRUE)
+                               if(is.null(fixed_pi)) {
+                                B2_R_pi = matrix(rbeta(p,b2_R-nLoci+1,nLoci+1),nrow = 1,ncol = p,byrow = TRUE)
+                               } else{
+                                 B2_R_pi = matrix(fixed_pi,nrow = 1,ncol = p)
+                               }
                                B2_R_prec[] = 1/matrix((colSums(B2_R^2) + B2_R_df*B2_R_scale)/rchisq(p,nLoci+B2_R_df),nrow = b2_R,ncol = p,byrow=TRUE)
                              }
                              
                              if(b2_F > 0) {
                                nLoci = colSums(B2_F_delta)
-                               B2_F_pi = matrix(rbeta(K,b2_F-nLoci+1,nLoci+1),nrow = 1,ncol = K,byrow = TRUE)
+                               if(is.null(fixed_pi)) {
+                                B2_F_pi = matrix(rbeta(K,b2_F-nLoci+1,nLoci+1),nrow = 1,ncol = K,byrow = TRUE)
+                               } else{
+                                 B2_F_pi = matrix(fixed_pi,nrow = 1,ncol = K)
+                               }
                                B2_F_prec[] = 1/matrix((colSums(B2_F^2) + B2_R_df*B2_R_scale)/rchisq(K,nLoci+B2_R_df),nrow = b2_F,ncol = K,byrow=TRUE)
                              }
                            
