@@ -171,12 +171,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // sample_h2s
-VectorXi sample_h2s(ArrayXXf log_ps);
+VectorXi sample_h2s(ArrayXXd log_ps);
 RcppExport SEXP _MegaLMM_sample_h2s(SEXP log_psSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< ArrayXXf >::type log_ps(log_psSEXP);
+    Rcpp::traits::input_parameter< ArrayXXd >::type log_ps(log_psSEXP);
     rcpp_result_gen = Rcpp::wrap(sample_h2s(log_ps));
     return rcpp_result_gen;
 END_RCPP
@@ -233,19 +233,19 @@ BEGIN_RCPP
 END_RCPP
 }
 // sample_trunc_delta_c_Eigen
-VectorXf sample_trunc_delta_c_Eigen(VectorXf delta, VectorXf tauh, VectorXf scores, VectorXf shapes, float delta_1_rate, float delta_2_rate, MatrixXf randu_draws, float trunc_point);
+VectorXd sample_trunc_delta_c_Eigen(VectorXd delta, VectorXd tauh, VectorXd scores, VectorXd shapes, double delta_1_rate, double delta_2_rate, MatrixXd randu_draws, double trunc_point);
 RcppExport SEXP _MegaLMM_sample_trunc_delta_c_Eigen(SEXP deltaSEXP, SEXP tauhSEXP, SEXP scoresSEXP, SEXP shapesSEXP, SEXP delta_1_rateSEXP, SEXP delta_2_rateSEXP, SEXP randu_drawsSEXP, SEXP trunc_pointSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< VectorXf >::type delta(deltaSEXP);
-    Rcpp::traits::input_parameter< VectorXf >::type tauh(tauhSEXP);
-    Rcpp::traits::input_parameter< VectorXf >::type scores(scoresSEXP);
-    Rcpp::traits::input_parameter< VectorXf >::type shapes(shapesSEXP);
-    Rcpp::traits::input_parameter< float >::type delta_1_rate(delta_1_rateSEXP);
-    Rcpp::traits::input_parameter< float >::type delta_2_rate(delta_2_rateSEXP);
-    Rcpp::traits::input_parameter< MatrixXf >::type randu_draws(randu_drawsSEXP);
-    Rcpp::traits::input_parameter< float >::type trunc_point(trunc_pointSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type tauh(tauhSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type scores(scoresSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type shapes(shapesSEXP);
+    Rcpp::traits::input_parameter< double >::type delta_1_rate(delta_1_rateSEXP);
+    Rcpp::traits::input_parameter< double >::type delta_2_rate(delta_2_rateSEXP);
+    Rcpp::traits::input_parameter< MatrixXd >::type randu_draws(randu_drawsSEXP);
+    Rcpp::traits::input_parameter< double >::type trunc_point(trunc_pointSEXP);
     rcpp_result_gen = Rcpp::wrap(sample_trunc_delta_c_Eigen(delta, tauh, scores, shapes, delta_1_rate, delta_2_rate, randu_draws, trunc_point));
     return rcpp_result_gen;
 END_RCPP

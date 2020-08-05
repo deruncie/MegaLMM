@@ -179,23 +179,26 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
       factor_order_withFixed = c(1:sum(fixed_factors),sum(fixed_factors)+factor_order)
     }
   }
-
-  reorder_params = c('Lambda','Lambda_prec','Plam',
-                     'delta',
-                     'F','B2_F','U_F','F_h2','F_e_prec','tot_F_prec', 'B2_F_prec'
-  )
-
+  
   # reorder currrent state
-  for(param in reorder_params){
-    if(! param %in% names(current_state)) next
-    if(ncol(current_state[[param]]) == nrow(Lambda)) {
-      current_state[[param]] = current_state[[param]][,factor_order_withFixed,drop=FALSE]
-    } else{
-      # for Lambda parameters
+  Lambda_params = c('Lambda','Lambda_prec','Lambda_pi','Lambda_beta','Lambda_delta')
+  F_params = c('F','B2_F','U_F','F_h2','tot_F_prec','B2_F_prec','B2_F_pi','B2_F_delta','B2_F_beta')
+  
+  for(param in Lambda_params) {
+    if(!param %in% names(current_state)) next
+    if(nrow(current_state[[param]]) == nrow(Lambda)) {
+      current_state[[param]] = current_state[[param]][factor_order_withFixed,,drop=FALSE]
+    } else if(nrow(current_state[[param]]) == sum(!fixed_factors)) {
       current_state[[param]] = current_state[[param]][factor_order,,drop=FALSE]
     }
   }
-  current_state$delta[1] = 1
+  for(param in F_params) {
+    if(!param %in% names(current_state)) next
+    current_state[[param]] = current_state[[param]][,factor_order_withFixed,drop=FALSE]
+  }
+  
+  # not re-ordering delta for now
+  # current_state$delta[1] = 1
   # current_state$delta = matrix(c(current_state$tauh[1],current_state$tauh[-1]/current_state$tauh[-length(current_state$tauh)]),nrow=1)
   MegaLMM_state$current_state = current_state
 
@@ -208,16 +211,17 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
     MegaLMM_state$current_state = MegaLMM_state$priors$B2_prior$sampler(MegaLMM_state,1)
   }
 
-  # reorder Posterior
-  Posterior = MegaLMM_state$Posterior
-
-  for(param in reorder_params){
-    if(! param %in% names(Posterior)) next
-    if(dim(Posterior[[param]])[1] == 0) next
-    Posterior[[param]] = Posterior[[param]][,,factor_order,drop=FALSE]
-  }
-
-  MegaLMM_state$Posterior = Posterior
+  # not re-ordering Posterior. Should be cleared anyway.
+  # # reorder Posterior
+  # Posterior = MegaLMM_state$Posterior
+  # 
+  # for(param in reorder_params){
+  #   if(! param %in% names(Posterior)) next
+  #   if(dim(Posterior[[param]])[1] == 0) next
+  #   Posterior[[param]] = Posterior[[param]][,,factor_order,drop=FALSE]
+  # }
+  # 
+  # MegaLMM_state$Posterior = Posterior
 
   return(MegaLMM_state)
 }

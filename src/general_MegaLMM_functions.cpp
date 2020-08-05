@@ -1147,24 +1147,24 @@ MatrixXf log_p_h2s(
 
 // [[Rcpp::export()]]
 VectorXi sample_h2s(
-    ArrayXXf log_ps
+    ArrayXXd log_ps
 )
 {
 
   int p = log_ps.cols();
   int b = log_ps.rows();
-  VectorXf rs = as<VectorXf>(runif(p));
+  VectorXd rs = as<VectorXd>(runif(p));
 
   VectorXi h2s_index(p);
 
   #pragma omp parallel for
   for(std::size_t j = 0; j < p; j++){
     // for(int j = 0; j < p; j++){
-    float max_col = log_ps.col(j).maxCoeff();
-    float norm_factor = max_col + log((log_ps.col(j) - max_col).exp().sum());
-    VectorXf ps_j = (log_ps.col(j) - norm_factor).exp();
+    double max_col = log_ps.col(j).maxCoeff();
+    double norm_factor = max_col + log((log_ps.col(j) - max_col).exp().sum());
+    VectorXd ps_j = (log_ps.col(j) - norm_factor).exp();
     h2s_index[j] = 1;
-    float cumsum = 0;
+    double cumsum = 0;
     for(int i = 0; i < b; i++){
       cumsum += ps_j[i];
       if(rs[j] > cumsum) {
@@ -1404,22 +1404,23 @@ Rcpp::List sample_tau2_delta_c_Eigen_v2(
                             Named("delta") = delta));
 }
 
+// This didn't work with floats - must have been overflow issues. Maybe use logs instead?
 // [[Rcpp::export()]]
-VectorXf sample_trunc_delta_c_Eigen(
-    VectorXf delta,
-    VectorXf tauh,
-    VectorXf scores,
-    VectorXf shapes,
-    float delta_1_rate,
-    float delta_2_rate,
-    MatrixXf randu_draws,
-    float trunc_point
+VectorXd sample_trunc_delta_c_Eigen(
+    VectorXd delta,
+    VectorXd tauh,
+    VectorXd scores,
+    VectorXd shapes,
+    double delta_1_rate,
+    double delta_2_rate,
+    MatrixXd randu_draws,
+    double trunc_point
 ) {
   int times = randu_draws.rows();
   int k = tauh.size();
-  float p,u;
-
-  float rate,delta_old;
+  double p,u;
+  
+  double rate,delta_old;
   for(int i = 0; i < times; i++){
     delta_old = delta(0);
     rate = delta_1_rate + (1/delta(0)) * tauh.dot(scores);
@@ -1427,7 +1428,7 @@ VectorXf sample_trunc_delta_c_Eigen(
     delta(0) = R::qgamma(u,shapes(0),1.0/rate,1,0);
     // tauh = cumprod(delta);
     tauh *= delta(0)/delta_old;   // replaces re-calculating cumprod
-
+    
     for(int h = 1; h < k; h++) {
       delta_old = delta(h);
       rate = delta_2_rate + (1/delta(h))*tauh.tail(k-h).dot(scores.tail(k-h));

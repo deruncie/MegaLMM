@@ -5,6 +5,127 @@
 // 
 // 
 // using namespace Eigen;
+// // [[Rcpp::export()]]
+// VectorXi sample_h2s2(
+//     ArrayXXd log_ps
+// )
+// {
+//   
+//   int p = log_ps.cols();
+//   int b = log_ps.rows();
+//   VectorXd rs = as<VectorXd>(runif(p));
+//   
+//   VectorXi h2s_index(p);
+//   
+// #pragma omp parallel for
+//   for(std::size_t j = 0; j < p; j++){
+//     // for(int j = 0; j < p; j++){
+//     double max_col = log_ps.col(j).maxCoeff();
+//     double norm_factor = max_col + log((log_ps.col(j) - max_col).exp().sum());
+//     VectorXd ps_j = (log_ps.col(j) - norm_factor).exp();
+//     h2s_index[j] = 1;
+//     double cumsum = 0;
+//     for(int i = 0; i < b; i++){
+//       cumsum += ps_j[i];
+//       if(rs[j] > cumsum) {
+//         h2s_index[j] ++;
+//       }
+//     }
+//     // if(h2s_index[j] > p) h2s_index[j] = p;
+//   }
+//   
+//   return h2s_index; // 1-based index
+// }
+
+// // [[Rcpp::export()]]
+// VectorXf sample_trunc_delta_c_Eigen2(
+//     VectorXf delta,
+//     VectorXf tauh_log,
+//     VectorXf scores,
+//     VectorXf shapes,
+//     float delta_1_rate,
+//     float delta_2_rate,
+//     MatrixXf randu_draws,
+//     float trunc_point
+// ) {
+//   int times = randu_draws.rows();
+//   int k = tauh_log.size();
+//   float p,u;
+//   
+//   float rate,delta_old;
+//   for(int i = 0; i < times; i++){
+//     delta_old = delta(0);
+//     rate = delta_1_rate + (1/delta(0)) * tauh_log.dot(scores);
+//     u = randu_draws(i,0); // don't truncate delta(0)
+//     delta(0) = R::qgamma(u,shapes(0),1.0/rate,1,0);
+//     // tauh_log = cumprod(delta);
+//     tauh_log *= delta(0)/delta_old;   // replaces re-calculating cumprod
+//     
+//     for(int h = 1; h < k; h++) {
+//       delta_old = delta(h);
+//       rate = delta_2_rate + (1/delta(h))*tauh_log.tail(k-h).dot(scores.tail(k-h));
+//       p = R::pgamma(trunc_point,shapes(h),1.0/rate,1,0);  // left-tuncate delta(h) at trunc_point
+//       if(p > 0.999) {
+//         // p = 0.999;  // prevent over-flow.
+//         delta(h) = trunc_point;
+//       } else {
+//         u = p + (1.0-p)*randu_draws(i,h);
+//         delta(h) = R::qgamma(u,shapes(h),1.0/rate,1,0);
+//       }
+//       Rcout << rate << " " << delta(h) << " " << p << std::endl;
+//       // tauh_log = cumprod(delta);
+//       tauh_log.tail(k-h) *= delta(h)/delta_old; // replaces re-calculating cumprod
+//       // Rcout << (tauh_log - cumprod(delta)).sum() << std::endl;
+//     }
+//   }
+//   return(delta);
+// }
+// 
+// 
+// // [[Rcpp::export()]]
+// VectorXd sample_trunc_delta_c_Eigen3(
+//     VectorXd delta,
+//     VectorXd tauh,
+//     VectorXd scores,
+//     VectorXd shapes,
+//     double delta_1_rate,
+//     double delta_2_rate,
+//     MatrixXd randu_draws,
+//     double trunc_point
+// ) {
+//   int times = randu_draws.rows();
+//   int k = tauh.size();
+//   double p,u;
+//   
+//   double rate,delta_old;
+//   for(int i = 0; i < times; i++){
+//     delta_old = delta(0);
+//     rate = delta_1_rate + (1/delta(0)) * tauh.dot(scores);
+//     u = randu_draws(i,0); // don't truncate delta(0)
+//     delta(0) = R::qgamma(u,shapes(0),1.0/rate,1,0);
+//     // tauh = cumprod(delta);
+//     tauh *= delta(0)/delta_old;   // replaces re-calculating cumprod
+//     
+//     for(int h = 1; h < k; h++) {
+//       delta_old = delta(h);
+//       rate = delta_2_rate + (1/delta(h))*tauh.tail(k-h).dot(scores.tail(k-h));
+//       p = R::pgamma(trunc_point,shapes(h),1.0/rate,1,0);  // left-tuncate delta(h) at trunc_point
+//       if(p > 0.999) {
+//         // p = 0.999;  // prevent over-flow.
+//         delta(h) = trunc_point;
+//       } else {
+//         u = p + (1.0-p)*randu_draws(i,h);
+//         delta(h) = R::qgamma(u,shapes(h),1.0/rate,1,0);
+//       }
+//       Rcout << rate << " " << delta(h) << " " << p << std::endl;
+//       // tauh = cumprod(delta);
+//       tauh.tail(k-h) *= delta(h)/delta_old; // replaces re-calculating cumprod
+//       // Rcout << (tauh - cumprod(delta)).sum() << std::endl;
+//     }
+//   }
+//   return(delta);
+// }
+
 // 
 // struct General_Matrix_f2 {
 //   MatrixXf dense;

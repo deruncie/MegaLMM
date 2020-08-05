@@ -184,35 +184,39 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
                              Lambda_pi = matrix(1,Kr,1)
                              Lambda_delta = matrix(1,Kr,p)
                              Lambda_beta = matrix(1,Kr,p)
-                             trunc_point_delta = 1
+                             trunc_point_delta = 0
+                             varEffects = 1
+                           } else{
+                             nLoci = rowSums(Lambda_delta)
+                             Lambda_pi = matrix(rbeta(Kr,p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
+                             
+                             Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
+                             # varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)
+                             varEffects = (sum(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(1,sum(nLoci) + Lambda_df)
+                                 
+                             # # -----Sample delta, update tauh------ #
+                             scores = 0.5*rowSums(Lambda2 / varEffects)
+                             # shapes = c(delta_1_shape + 0.5*p*Kr,
+                             #            delta_2_shape + 0.5*p*((Kr-1):1))
+                             shapes = c(delta_1_shape + 0.5*sum(Lambda_delta),
+                                        delta_2_shape + 0.5*(sum(Lambda_delta)-cumsum(rowSums(Lambda_delta)))[-Kr])  # nLoci in all higher-order rows of Lambda
+                             times = delta_iterations_factor
+                             # randg_draws = matrix(rgamma(times*Kr,shape = shapes,rate = 1),nr=times,byrow=T)
+                             # delta[] = sample_delta_c_Eigen( delta,tauh,scores,delta_1_rate,delta_2_rate,randg_draws)
+                             randu_draws = matrix(runif(times*Kr),nr=times)
+                             delta[] = sample_trunc_delta_c_Eigen( delta,tauh,scores,shapes,delta_1_rate,delta_2_rate,randu_draws,trunc_point_delta)
+                             tauh[]  = matrix(cumprod(delta),nrow=1)
+                             rm(list = c('Lambda2','scores'))
                            }
-                           nLoci = rowSums(Lambda_delta)
-                           Lambda_pi = matrix(rbeta(Kr,p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
                            
-                           Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
-                           varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)
-                               
-                           # # -----Sample delta, update tauh------ #
-                           scores = 0.5*rowSums(Lambda2 / varEffects)
-                           # shapes = c(delta_1_shape + 0.5*p*Kr,
-                           #            delta_2_shape + 0.5*p*((Kr-1):1))
-                           shapes = c(delta_1_shape + 0.5*sum(Lambda_delta),
-                                      delta_2_shape + 0.5*(sum(Lambda_delta)-cumsum(rowSums(Lambda_delta)))[-Kr])  # nLoci in all higher-order rows of Lambda
-                           times = delta_iterations_factor
-                           # randg_draws = matrix(rgamma(times*Kr,shape = shapes,rate = 1),nr=times,byrow=T)
-                           # delta[] = sample_delta_c_Eigen( delta,tauh,scores,delta_1_rate,delta_2_rate,randg_draws)
-                           randu_draws = matrix(runif(times*Kr),nr=times)
-                           delta[] = sample_trunc_delta_c_Eigen( delta,tauh,scores,shapes,delta_1_rate,delta_2_rate,randu_draws,trunc_point_delta)
-                           tauh[]  = matrix(cumprod(delta),nrow=1)
-                           
-                           Lambda_prec[] = sweep(1/varEffects,1,tauh,'*')
+                           Lambda_prec[] = t(tauh)[,rep(1,p),drop=FALSE]/varEffects
+                             # sweep(1/varEffects,1,tauh,'*')
                            
                            
                            # # ----- Calcualte m_eff -------------- #
                            # kappa = 1/(1+n/(Lambda_prec*Lambda_delta))
                            # Lambda_m_eff[] = rowSums(1-kappa)
                            
-                           rm(list = c('Lambda2','scores'))
                          })
                        }))
   return(current_state)
