@@ -42,7 +42,7 @@
 #'
 MegaLMM_control = function(
                         which_sampler = list(Y = 1,F = 1),
-                        BayesAlphabet_priors = list(Y = FALSE,F = FALSE),
+                        run_sampler_times = 1,
                         scale_Y = c(T,F),
                         K = 20, h2_divisions = 100, h2_step_size = NULL,
                         drop0_tol = 1e-14, K_eigen_tol = 1e-10,
@@ -210,7 +210,8 @@ MegaLMM_priors = function(
 setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL, cis_genotypes = NULL, Lambda_fixed = NULL,
                             run_parameters = MegaLMM_control(),
                             posteriorSample_params = c('Lambda','U_F','F','delta','tot_F_prec','F_h2','tot_Eta_prec',
-                                                       'resid_h2', 'B1', 'B2_F','B2_R','U_R','cis_effects','Lambda_m_eff'),
+                                                       'resid_h2', 'B1', 'B2_F','B2_R','U_R','cis_effects','Lambda_m_eff',
+                                                       'Lambda_pi','B2_R_pi','B2_F_pi'),
                             posteriorMean_params = c(),
                             run_ID = 'MegaLMM_run'){
   # creates model matrices, RE_setup, current_state

@@ -198,18 +198,18 @@ MatrixXf General_Matrix_f::crossprod(MatrixXf Y) const {
   if(isNULL) return(Y);
   if(triangular) {
     if(isDense) {
-      if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+      if(Y.rows() != dense.rows()) stop("Wrong dimension for Y");
       return(dense.transpose().triangularView<Lower>() * Y);
     } else{
-      if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+      if(Y.rows() != sparse.rows()) stop("Wrong dimension for Y");
       return(sparse.transpose().triangularView<Lower>() * Y);
     }
   } else{
     if(isDense) {
-      if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+      if(Y.rows() != dense.rows()) stop("Wrong dimension for Y");
       return(dense.transpose() * Y);
     } else{
-      if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+      if(Y.rows() != sparse.rows()) stop("Wrong dimension for Y");
       return(sparse.transpose() * Y);
     }
   }
@@ -718,7 +718,6 @@ Rcpp::List regression_sampler_parallel(
     MatrixXf prior_prec_beta, // b x p matrix of prior precisions of beta
     SEXP current_alpha1s_,
     SEXP current_alpha2s_,
-    SEXP current_betas_,    // p-list of a2 x 1 vectors
     Rcpp::List BayesAlphabet_parms
 ) {
   
@@ -777,21 +776,6 @@ Rcpp::List regression_sampler_parallel(
       b = Vx.cols();
     }
   }
-  // // X2 or Ux and V
-  // MatrixXf Ux = X2;
-  // MatrixXf Vx = MatrixXf::Zero(0,0);
-  // // MatrixXf Vx(z.data(),0,0);
-  // int b = X2.cols();
-  // if(X2.rows() != n) stop("Wrong dimension of X2");
-  // if(beta2.rows() != p || beta2.cols() != b) stop("Wrong dimension of beta2");
-  // if(Rf_isMatrix(Vx_)) {
-  //   Vx = as<MatrixXf>(Vx_);
-  //   // MatrixXf V__ = as<MatrixXf >(Vx_);
-  //   // new (&v) MatrixXf (V__,V__.rows(),V__.cols());
-  //   // new (&Vx) MatrixXf (as<MatrixXf >(Vx_));
-  //   // if(Ux.cols() != Vx.rows()) stop("X2 and Vx_ have incompatible dimensions");
-  //   b = Vx.cols();
-  // }
   
   // for BayesAlphabet
   MatrixXf current_alpha1s, betas_alpha, betas_beta, betas_pi;
@@ -799,12 +783,12 @@ Rcpp::List regression_sampler_parallel(
   std::vector<General_Matrix_f> current_alpha2s;
   if(which_sampler == 4) {
     current_alpha1s = as<MatrixXf>(current_alpha1s_);
-    betas_beta = as<MatrixXf>(current_betas_);
     if(Rf_isList(current_alpha2s_)) {
       List temp = as<List>(current_alpha2s_);
       load_General_Matrix_f_list(temp,current_alpha2s, false);
     }
     betas_alpha = as<MatrixXf>(BayesAlphabet_parms["alpha"]);
+    betas_beta = as<MatrixXf>(BayesAlphabet_parms["beta"]);
     betas_pi = as<MatrixXf>(BayesAlphabet_parms["pi"]); 
     betas_delta = as<MatrixXi>(BayesAlphabet_parms["delta"]); 
     run_sampler_times = as<int>(BayesAlphabet_parms["run_sampler_times"]); 
@@ -1187,6 +1171,7 @@ VectorXi sample_h2s(
         h2s_index[j] ++;
       }
     }
+    if(h2s_index[j] > p) h2s_index[j] = p;
   }
 
   return h2s_index; // 1-based index

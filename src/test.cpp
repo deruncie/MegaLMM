@@ -6,6 +6,261 @@
 // 
 // using namespace Eigen;
 // 
+// struct General_Matrix_f2 {
+//   MatrixXf dense;
+//   SpMat sparse;
+//   bool triangular;
+//   bool isDense;
+//   bool isNULL = false;
+//   General_Matrix_f2(MatrixXf dense_, SpMat sparse_,bool triangular_, bool isDense_,bool isNULL_) : dense(dense_), sparse(sparse_), triangular(triangular_), isDense(isDense_), isNULL(isNULL_){}
+//   MatrixXf solve(MatrixXf) const;
+//   MatrixXf tsolve(MatrixXf) const;
+//   MatrixXf operator*(MatrixXf) const;
+//   MatrixXf crossprod(MatrixXf) const;
+//   float get_log_det();
+//   int rows() const;
+//   int cols() const;
+// };
+// 
+// // [[Rcpp::export()]]
+// MatrixXf rstdnorm_mat2(int n,int p) {  // returns nxp matrix
+//   VectorXd X_vec(n*p);
+//   for(int i = 0; i < n*p; i++){
+//     X_vec[i] = ziggr.norm();
+//   }
+//   MatrixXd X_mat = Map<MatrixXd>(X_vec.data(),n,p);
+//   return(X_mat.cast<float>());
+// }
+// // Loads a sparse or dense matrix passed from R into a \code{General_Matrix_f2} object
+// General_Matrix_f2 load_General_Matrix_f2(SEXP X_, bool triangular) {
+//   MatrixXf null_d = MatrixXf::Zero(0,0);
+//   if(Rf_isNull(X_)) {
+//     SpMat null_s = null_d.sparseView();
+//     General_Matrix_f2 Xm(null_d,null_s,triangular,false,true);
+//     return(Xm);
+//   } else if(Rf_isMatrix(X_)){
+//     MatrixXf X = as<MatrixXf >(X_);
+//     SpMat null_s = null_d.sparseView();
+//     General_Matrix_f2 Xm(X,null_s,triangular,true,false);
+//     return(Xm);
+//   } else{
+//     SpMat X = as<SpMat>(X_);
+//     General_Matrix_f2 Xm(null_d,X,triangular,false,false);
+//     return(Xm);
+//   }
+// }
+// 
+// MatrixXf General_Matrix_f2::solve(MatrixXf Y) const {
+//   if(isNULL) return(Y);
+//   if(triangular) {
+//     if(isDense) {
+//       if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+//       return(dense.triangularView<Upper>().solve(Y));
+//     } else{
+//       if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+//       return(sparse.triangularView<Upper>().solve(Y));
+//     }
+//   } else{
+//     // Note: these Cholesky's could be stored so they could be re-used.
+//     if(isDense) {
+//       return(dense.ldlt().solve(Y));
+//     } else{
+//       Eigen::SimplicialLDLT<SpMat> ldlt(sparse);
+//       return(ldlt.solve(Y));
+//     }
+//   }
+// }
+// MatrixXf General_Matrix_f2::tsolve(MatrixXf Y) const {
+//   if(isNULL) return(Y);
+//   if(triangular) {
+//     if(isDense) {
+//       if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+//       return(dense.transpose().triangularView<Lower>().solve(Y));
+//     } else{
+//       if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+//       return(sparse.transpose().triangularView<Lower>().solve(Y));
+//     }
+//   } else{
+//     // Note: these Cholesky's could be stored so they could be re-used.
+//     if(isDense) {
+//       return(dense.transpose().ldlt().solve(Y));
+//     } else{
+//       Eigen::SimplicialLDLT<SpMat> ldlt(sparse.transpose());
+//       return(ldlt.solve(Y));
+//     }
+//   }
+// }
+// 
+// MatrixXf General_Matrix_f2::operator*(MatrixXf Y) const {
+//   if(isNULL) return(Y);
+//   if(triangular) {
+//     if(isDense) {
+//       if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+//       return(dense.triangularView<Upper>() * Y);
+//     } else{
+//       if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+//       return(sparse * Y);
+//     }
+//   } else {
+//     if(isDense) {
+//       if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+//       return(dense * Y);
+//     } else{
+//       if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+//       return(sparse * Y);
+//     }
+//   }
+// }
+// MatrixXf General_Matrix_f2::crossprod(MatrixXf Y) const {
+//   if(isNULL) return(Y);
+//   if(triangular) {
+//     if(isDense) {
+//       if(Y.rows() != dense.rows()) stop("Wrong dimension for Y");
+//       return(dense.transpose().triangularView<Lower>() * Y);
+//     } else{
+//       if(Y.rows() != sparse.rows()) stop("Wrong dimension for Y");
+//       return(sparse.transpose().triangularView<Lower>() * Y);
+//     }
+//   } else{
+//     if(isDense) {
+//       if(Y.rows() != dense.rows()) stop("Wrong dimension for Y");
+//       return(dense.transpose() * Y);
+//     } else{
+//       if(Y.rows() != sparse.rows()) stop("Wrong dimension for Y");
+//       return(sparse.transpose() * Y);
+//     }
+//   }
+// }
+// float General_Matrix_f2::get_log_det() {
+//   if(isNULL) stop("no determinant of null matrix");
+//   if(!triangular) stop("not implemented for non-triangular matrix");
+//   if(isDense) {
+//     return(dense.diagonal().array().log().sum());
+//   } else {
+//     float log_det = 0;
+//     for(int j = 0; j < sparse.rows(); j++) {
+//       log_det += std::log(sparse.coeffRef(j,j));
+//     }
+//     return(log_det);
+//   }
+// }
+// int General_Matrix_f2::rows() const {
+//   int r;
+//   if(isDense) {
+//     r = dense.rows(); 
+//   } else {
+//     r = sparse.rows();
+//   }
+//   return(r);
+// }
+// int General_Matrix_f2::cols() const {
+//   int c;
+//   if(isDense) {
+//     c = dense.cols(); 
+//   } else {
+//     c = sparse.cols();
+//   }
+//   return(c);
+// }
+// 
+// void load_General_Matrix_f_list2(const Rcpp::List X_list, std::vector<General_Matrix_f2>& X_vector, bool triangular){
+//   // null_matrices
+//   // MatrixXf null_d = MatrixXf::Zero(0,0);
+//   // MatrixXf M_null_d(null_d.data(),0,0);
+//   // SpMat null_s = null_d.sparseView();
+//   // MSpMat M_null_s(0,0,0,null_s.outerIndexPtr(),null_s.innerIndexPtr(),null_s.valuePtr());
+//   
+//   int p = X_list.size();
+//   X_vector.reserve(p);
+//   for(int i = 0; i < p; i++){
+//     SEXP Xi_ = X_list[i];
+//     X_vector.push_back(load_General_Matrix_f2(Xi_, triangular));
+//     // if(Rf_isMatrix(Xi_)){
+//     //   MatrixXf Xi = as<MatrixXf >(Xi_);
+//     //   General_Matrix_f2 Xim(Xi,M_null_s,true);
+//     //   X_vector.push_back(Xim);
+//     // } else{
+//     //   MSpMat Xi = as<MSpMat>(Xi_);
+//     //   General_Matrix_f2 Xim(M_null_d,Xi,false);
+//     //   X_vector.push_back(Xim);
+//     // }
+//   }
+// }
+// VectorXf sample_MME_single_diagR2(
+//     VectorXf y,           // nx1
+//     General_Matrix_f2 Z,    // nxr dgCMatrix or dense
+//     SpMat chol_ZtZ_Kinv,       // rxr CsparseMatrix upper triangular: chol(ZtRinvZ + diag(Kinv))
+//     float tot_Eta_prec,   // float
+//     float pe,            // float
+//     VectorXf randn_theta  // rx1
+// ){
+//   VectorXf b;
+//   b = Z.crossprod(y)*pe;
+//   // if(Rf_isMatrix(Z_)) {
+//   //   MatrixXf Z = as<MatrixXf>(Z_);
+//   //   b = Z.transpose() * y * pe;
+//   // } else{
+//   //   SpMat Z = as<SpMat>(Z_);
+//   //   b = Z.transpose() * y * pe;
+//   // }
+//   // if(Z.isDense) {
+//   //   b = Z.dense.transpose() * y * pe;
+//   // } else{
+//   //   b = Z.sparse.transpose() * y * pe;
+//   // }
+//   b = chol_ZtZ_Kinv.transpose().triangularView<Lower>().solve(b / sqrt(tot_Eta_prec));
+//   b += randn_theta;
+//   b = chol_ZtZ_Kinv.triangularView<Upper>().solve(b / sqrt(tot_Eta_prec));
+//   return(b);
+// }
+// 
+// // [[Rcpp::export()]]
+// MatrixXf sample_MME_ZKZts_c2(
+//     MatrixXf Y,                    // nxp
+//     SEXP Z_,
+//     VectorXf tot_Eta_prec,         // px1
+//     Rcpp::List chol_ZtZ_Kinv_list_,      // List or R st RtR = ZtZ_Kinv
+//     MatrixXf h2s,                  // n_RE x p
+//     VectorXi h2s_index                 // px1
+// ) {
+//   
+//   General_Matrix_f2 Z = load_General_Matrix_f2(Z_,false);
+//   
+//   int p = Y.cols();
+//   int r = Z.cols();
+//   // Rcout << Y.rows();
+//   // Rcout << Z.rows();
+//   // int r = Y.cols();
+//   // if(Z.isDense) {
+//   //   r = Z.dense.cols();
+//   // } else{
+//   //   r = Z.sparse.cols();
+//   // }
+//   
+//   MatrixXf randn_theta = rstdnorm_mat2(r,p);
+//   
+//   std::vector<General_Matrix_f2> chol_ZtZ_Kinv_list;
+//   load_General_Matrix_f_list2(chol_ZtZ_Kinv_list_, chol_ZtZ_Kinv_list, true);
+//   
+//   MatrixXf U = MatrixXf::Zero(r,p);
+//   ArrayXf h2_e = 1.0 - h2s.colwise().sum().array();
+//   ArrayXf pes = tot_Eta_prec.array() / h2_e.array();
+//   
+// #pragma omp parallel for
+//   for(std::size_t j = 0; j < p; j++){
+//     int h2_index = h2s_index[j] - 1;
+//     // Rcout << h2_index << std::endl;
+//     // ZtZ_Kinv needs to be scaled by tot_Eta_prec[j].
+//     U.col(j) = sample_MME_single_diagR2(Y.col(j), Z, chol_ZtZ_Kinv_list[h2_index].sparse, tot_Eta_prec[j], pes[j],randn_theta.col(j));
+//     // Rcout << a.size() << std::endl;
+//     // U.col(j)
+//   }
+//   
+//   return(U);
+// }
+
+
+// 
 // struct Cr {
 //   MatrixXf X;
 //   Cr(MatrixXf X_): X(X_){}
