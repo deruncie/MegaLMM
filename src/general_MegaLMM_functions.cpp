@@ -153,6 +153,44 @@ MatrixXf General_Matrix_f::solve(MatrixXf Y) const {
     }
   }
 }
+
+// MatrixXf General_Matrix_f::solve(General_Matrix_f Y) const {
+//   if(isNULL) return(Y);
+//   if(triangular) {
+//     if(isDense) {
+//       if(Y.rows() != dense.cols()) stop("Wrong dimension for Y");
+//       if(Y.isDense) {
+//         return(dense.triangularView<Upper>().solve(Y.dense));
+//       } else {
+//         MatrixXf Z(dense.rows,Y.cols);
+//         for(int j = 0; j < Y.cols; j++) Z.col(j) = dense.triangularView<Upper>().solve(Y.sparse.col(j));
+//       }
+//     } else{
+//       if(Y.rows() != sparse.cols()) stop("Wrong dimension for Y");
+//       if(Y.isDense) {
+//         return(sparse.triangularView<Upper>().solve(Y.dense));
+//       } else {
+//         return(sparse.triangularView<Upper>().solve(Y.sparse));
+//       }
+//     }
+//   } else{
+//     // Note: these Cholesky's could be stored so they could be re-used.
+//     if(isDense) {
+//       if(Y.isDense) {
+//         return(dense.ldlt().solve(Y.dense));
+//       } else {
+//         return(dense.ldlt().solve(Y.sparse));
+//       }
+//     } else{
+//       Eigen::SimplicialLDLT<SpMat> ldlt(sparse);
+//       if(Y.isDense) {
+//         return(ldlt.solve(Y.dense));
+//       } else {
+//         return(ldlt.solve(Y.sparse));
+//       }
+//     }
+//   }
+// }
 MatrixXf General_Matrix_f::tsolve(MatrixXf Y) const {
   if(isNULL) return(Y);
   if(triangular) {
@@ -251,26 +289,11 @@ int General_Matrix_f::cols() const {
 // @param X_list List of matrices (each can be dgCMatrix or matrix)
 // @param X_vector \code{std::vector} of \code{General_Matrix_f} type which will be populated
 void load_General_Matrix_f_list(const Rcpp::List X_list, std::vector<General_Matrix_f>& X_vector, bool triangular){
-  // null_matrices
-  // MatrixXf null_d = MatrixXf::Zero(0,0);
-  // MatrixXf M_null_d(null_d.data(),0,0);
-  // SpMat null_s = null_d.sparseView();
-  // MSpMat M_null_s(0,0,0,null_s.outerIndexPtr(),null_s.innerIndexPtr(),null_s.valuePtr());
-
   int p = X_list.size();
   X_vector.reserve(p);
   for(int i = 0; i < p; i++){
     SEXP Xi_ = X_list[i];
     X_vector.push_back(load_General_Matrix_f(Xi_, triangular));
-    // if(Rf_isMatrix(Xi_)){
-    //   MatrixXf Xi = as<MatrixXf >(Xi_);
-    //   General_Matrix_f Xim(Xi,M_null_s,true);
-    //   X_vector.push_back(Xim);
-    // } else{
-    //   MSpMat Xi = as<MSpMat>(Xi_);
-    //   General_Matrix_f Xim(M_null_d,Xi,false);
-    //   X_vector.push_back(Xim);
-    // }
   }
 }
 

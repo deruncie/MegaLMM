@@ -49,6 +49,7 @@ struct General_Matrix_f {
   bool isNULL = false;
   General_Matrix_f(MatrixXf dense_, SpMat sparse_,bool triangular_, bool isDense_,bool isNULL_) : dense(dense_), sparse(sparse_), triangular(triangular_), isDense(isDense_), isNULL(isNULL_){}
   MatrixXf solve(MatrixXf) const;
+  // General_Matrix_f solve(General_Matrix_f) const;
   MatrixXf tsolve(MatrixXf) const;
   MatrixXf operator*(MatrixXf) const;
   MatrixXf crossprod(MatrixXf) const;

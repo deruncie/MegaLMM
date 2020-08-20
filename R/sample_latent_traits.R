@@ -253,7 +253,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
       BayesAlphabet_parms = list(
         alpha = B2_F,
         beta = B2_F_beta,
-        pi = B2_F_pi,
+        pi = B2_F_pi[rep(1,b2_F),,drop=FALSE],
         delta = B2_F_delta,
         run_sampler_times = run_sampler_times
       )
