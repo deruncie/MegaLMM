@@ -96,6 +96,11 @@ sample_latent_traits = function(MegaLMM_state,...) {
           BayesAlphabet_parms$pi = rbind(matrix(B2_R_pi[cols],b2_R,length(cols),byrow=T),matrix(Lambda_pi,nrow = Kr,ncol = length(cols)))
           BayesAlphabet_parms$delta = rbind(B2_R_delta[,cols,drop=FALSE],Lambda_delta[,cols,drop=FALSE])
         }
+        # recover()
+        # asdf=0
+        # # while(sum(is.na(new_samples$Y_prec)) == 0) {
+        # while(T) {
+        # asdf = asdf+1
         new_samples = regression_sampler_parallel(
           which_sampler = which_sampler$Y,
           Y = Y_set,
@@ -115,6 +120,11 @@ sample_latent_traits = function(MegaLMM_state,...) {
           current_alpha2s_ = NULL,
           BayesAlphabet_parms = BayesAlphabet_parms
         )
+        if(sum(is.na(new_samples$alpha1)) + sum(is.na(new_samples$beta)) + sum(is.na(new_samples$Y_prec)) > 0) break
+        # }
+        # }
+        # if(sum(new_samples$beta[b2_R + 1:Kr,]) == 0) recover()
+        if(sum(is.na(new_samples$alpha1)) + sum(is.na(new_samples$beta)) + sum(is.na(new_samples$Y_prec)) > 0) recover()
         
         # extract samples
         

@@ -602,11 +602,11 @@ VectorXf regression_sampler_v3(  // returns vector of length 1 + a + b for y_pre
 // Single-site updater
 // BayesC implementation
 VectorXf regression_sampler_v4(
-    const Ref<const VectorXf>& y,
-    MatrixXf& X1,
-    MatrixXf& X2,
-    ArrayXf& diag_X1tX1,
-    ArrayXf& diag_X2tX2,
+    const Ref<const VectorXf>& y_,           // nx1
+    const MatrixXf& X1_,           // nxa
+    const MatrixXf& X2,
+    const ArrayXf& diag_X2tX2,
+    const General_Matrix_f& chol_V,                    // either a upper-triangular matrix or upper-triangular CsparseMatrix
     VectorXf a,
     VectorXf alpha,
     VectorXf beta,
@@ -621,21 +621,56 @@ VectorXf regression_sampler_v4(
     float Y_prec_b0,
     int nIter
 ) {
+  VectorXf y = chol_V.tsolve(y_);
+  MatrixXf X1 = chol_V.tsolve(X1_);
+  ArrayXf diag_X1tX1 = X1.cwiseProduct(X1).colwise().sum();
+// VectorXf regression_sampler_v4(
+//   const VectorXf& y,
+//   const MatrixXf& X1,
+//   const MatrixXf& X2,
+//   const ArrayXf& diag_X1tX1,
+//   const ArrayXf& diag_X2tX2,
+//   VectorXf a,
+//   VectorXf alpha,
+//   VectorXf beta,
+//   VectorXi delta,
+//   float invVarRes,
+//   const Ref<const VectorXf>& invVarEffects, // bx1
+//   const Ref<const VectorXf>& pi,
+//   const Ref<const VectorXf>& randn_a,
+//   const Ref<const VectorXf>& randn_beta,
+//   const Ref<const VectorXf>& rand_unif,
+//   const Ref<const VectorXf>& rgamma_1,
+//   float Y_prec_b0,
+//   int nIter
+// ) {
+  // const Ref<const VectorXf>& invVarEffects, // bx1
+  // const Ref<const VectorXf>& pi,
+  // const Ref<const VectorXf>& randn_a,
+  // const Ref<const VectorXf>& randn_beta,
+  // const Ref<const VectorXf>& rand_unif,
+  // const Ref<const VectorXf>& rgamma_1,
   
-  
+  int nMarkers      = alpha.size();
+
   ArrayXf logPi = pi.array().log();
   ArrayXf logPiComp = (1.0 - pi.array()).log();
   ArrayXf logDelta0 = logPi;
   ArrayXf logVarEffects = invVarEffects.array().inverse().log();
-  int nMarkers      = alpha.size();
-  
+  // // if(invVarEffects.size() != nMarkers) stop("Wrong length of invVarEffects");
+  // // if(randn_a.size() != X1.cols()* nIter) stop("Wrong length of a");
+  // // if(pi.size() != nMarkers) stop("Wrong length of pi");
+  // // if(randn_beta.size() != nMarkers * nIter) stop("Wrong length of randn_beta");
+  // // if(rand_unif.size() != nMarkers * nIter) stop("Wrong length of rand_unif");
+  // // if(rgamma_1.size() != nIter) stop("Wrong length of rgamma_1");
+
   VectorXf yCorr = y - X1*a;
   for(int j = 0; j < nMarkers; j++) {
     if(delta[j] != 0) yCorr -= X2.col(j)*alpha[j];
   }
-  
+
   for(int i = 0; i < nIter; i++) {
-    
+
     // Sample a
     for(int j = 0; j < a.size(); j++) {
       float rhs = (X1.col(j).dot(yCorr) + diag_X1tX1[j]*a[j])*invVarRes;
@@ -646,7 +681,7 @@ VectorXf regression_sampler_v4(
       a[j] = gHat + randn_a(i*a.size() + j)*sqrt(invLhs);
       yCorr += X1.col(j) * (old_a - a[j]);
     }
-    
+
     int nLoci         = 0;
     // Sample beta = alpha*delta
     for(int j = 0; j < nMarkers; j++) {
@@ -657,7 +692,7 @@ VectorXf regression_sampler_v4(
       float logDelta1 = -0.5*(log(lhs) + logVarEffects[j] - gHat*rhs) + logPiComp[j];
       float probDelta1 = 1.0 / (1.0 + exp(logDelta0[j] - logDelta1));
       float oldAlpha = alpha[j];
-      
+
       float u = rand_unif(i*nMarkers + j);
       float r = randn_beta(i*nMarkers + j);
       if(u < probDelta1) {
@@ -679,6 +714,8 @@ VectorXf regression_sampler_v4(
   }
   VectorXf result(1+a.size() + 3*nMarkers);
   result << invVarRes,a,alpha,beta,delta.cast<float>();
+  // VectorXf result = VectorXf::Zero(1+a.size() + 3*nMarkers);
+  // VectorXf result = VectorXf::Zero(1);
   return(result);
 }
 
@@ -890,7 +927,7 @@ Rcpp::List regression_sampler_parallel(
     
     if(trait_set.size() > 0){
       // prepare matrices for sampler
-      MatrixXf RinvtX2, C, V, Vinv, VinvUx, UtVinvU, RinvtX1;
+      MatrixXf RinvtX2, C, V, Vinv, VinvUx, UtVinvU;//, RinvtX1;
       ArrayXf diag_X1tVinvX1, diag_X2tVinvX2;
       General_Matrix_f chol_V = chol_V_list[h2_index - 1];
       if(which_sampler == 1) {
@@ -936,6 +973,7 @@ Rcpp::List regression_sampler_parallel(
         // }
         diag_X2tVinvX2 = RinvtX2.cwiseProduct(RinvtX2).colwise().sum();
       }
+      
       // REprintf("Number of threads=%i\\n", omp_get_max_threads());
       // Rcout <<trait_set.size() << " " << omp_get_max_threads() << std::endl;
       #pragma omp parallel for
@@ -966,7 +1004,7 @@ Rcpp::List regression_sampler_parallel(
           randn_alpha.tail(a2) = randn_alpha2[j];
         }
         
-        VectorXf samples;
+        VectorXf samples;// = VectorXf::Zero(1+a1+a2+beta.rows());
         if(which_sampler == 1) {
           b = RinvtX2.cols();
           samples = regression_sampler_v1(Y.col(j), X1, RinvtX2, C, prior_prec_alpha, prior_mean_beta.col(j),
@@ -984,36 +1022,43 @@ Rcpp::List regression_sampler_parallel(
                                            randn_beta.col(j), randn_e.col(j),rgamma_1(0,j),Y_prec_b0[j]);
         } else if(which_sampler == 4) {
           b = 3*RinvtX2.cols();
-          MatrixXf RinvtX1 = chol_V.tsolve(X1);
-          VectorXf Rinvty = chol_V.tsolve(Y.col(j));
+          // // RinvtX1 = chol_V.tsolve(X1);
+          // VectorXf Rinvty = chol_V.tsolve(Y.col(j));
           // if(chol_V.isDense) {
           //   RinvtX1 = chol_V.dense.transpose().triangularView<Lower>().solve(X1);
-          //   Rinvty = chol_V.dense.transpose().triangularView<Lower>().solve(Y.col(j));
+          //   // Rinvty = chol_V.dense.transpose().triangularView<Lower>().solve(Y.col(j));
           // } else{
           //   RinvtX1 = chol_V.sparse.transpose().triangularView<Lower>().solve(X1);
-          //   Rinvty = chol_V.sparse.transpose().triangularView<Lower>().solve(Y.col(j));
+          //   // Rinvty = chol_V.sparse.transpose().triangularView<Lower>().solve(Y.col(j));
           // }
-          diag_X1tVinvX1 = RinvtX1.cwiseProduct(RinvtX1).colwise().sum();
-          samples = regression_sampler_v4(Rinvty, RinvtX1, RinvtX2, diag_X1tVinvX1, diag_X2tVinvX2,
-                                          current_alpha1s.col(j), 
+          // diag_X1tVinvX1 = RinvtX1.cwiseProduct(RinvtX1).colwise().sum();
+          // samples = regression_sampler_v4(Rinvty, RinvtX1, RinvtX2, diag_X1tVinvX1, diag_X2tVinvX2,
+          //                                 current_alpha1s.col(j),
+          //                                 betas_alpha.col(j), betas_beta.col(j), betas_delta.col(j),
+          //                                 Y_prec[j], prior_prec_beta.col(j),
+          //                                 betas_pi.col(j),
+          //                                 randn_alpha,randn_beta.col(j), rand_unif.col(j),rgamma_1.col(j), Y_prec_b0[j],
+          //                                 run_sampler_times);
+          samples = regression_sampler_v4(Y.col(j), X1, RinvtX2, diag_X2tVinvX2,
+                                          chol_V,
+                                          current_alpha1s.col(j),
                                           betas_alpha.col(j), betas_beta.col(j), betas_delta.col(j),
                                           Y_prec[j], prior_prec_beta.col(j),
-                                          betas_pi.col(j), 
+                                          betas_pi.col(j),
                                           randn_alpha,randn_beta.col(j), rand_unif.col(j),rgamma_1.col(j), Y_prec_b0[j],
                                           run_sampler_times);
-          
         } else {
           stop("sampler not implemented");
         }
+        if(samples.size() != 1 + a1 + a2 + b) stop("wrong length of samples");
+        // samples = VectorXf::Ones(1+a1+a2+b);
         
+        // float prec = samples[0];
         // extract samples
         Y_prec[j] = samples[0];
         if(a1 > 0) alpha1.col(j) = samples.segment(1,a1);
         if(a2 > 0) alpha2[j] = samples.segment(1+a1,a2);
         if(b > 0) beta.col(j) = samples.segment(1+a1+a2,b);
-        // if(which_sampler > 3) {
-        //   
-        // }
       }
     }
   }

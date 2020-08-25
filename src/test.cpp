@@ -2,6 +2,16 @@
 // #include <iostream>
 // #include "MegaLMM_types.h"
 // 
+// using namespace Eigen;
+// // [[Rcpp::export()]]
+// 
+// VectorXf test(VectorXf y, VectorXi x){
+//   VectorXf z(y.size() + x.size());
+//   z << y,x.cast<float>();
+//   return(z);
+// }
+
+// 
 // 
 // 
 // using namespace Eigen;

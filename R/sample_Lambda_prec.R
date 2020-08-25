@@ -188,12 +188,15 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
                              trunc_point_delta = 0
                              varEffects = 1
                            } else{
+                             # if(sum(Lambda != 0) == 0) recover()
                              nLoci = rowSums(Lambda_delta)
                              if(is.null(fixed_pi)) {
                               Lambda_pi = matrix(rbeta(Kr,p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
                              } else{
                                Lambda_pi = matrix(fixed_pi,nrow = Kr, ncol = 1)
                              }
+                             # print(cbind(Lambda_pi, 1-nLoci/p,rowSums(Lambda == 0)/p))
+                             # print(rowSums(Lambda==0)/p)
                              
                              Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
                              # varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)

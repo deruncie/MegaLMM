@@ -54,7 +54,7 @@ Several other parameters are also necessary and are described in the help file: 
 ```{r}
 run_parameters = MegaLMM_control(
   which_sampler = list(Y=4,F=1),
-  run_sampler_times = 10,
+  run_sampler_times = 3,
   max_NA_groups = 3,
   scale_Y = FALSE,   # should the columns of Y be re-scaled to have mean=0 and sd=1?
   h2_divisions = 20, # Each variance component is allowed to explain between 0% and 100% of the total variation. How many segments should the range [0,100) be divided into for each random effect?
@@ -145,6 +145,7 @@ MegaLMM_state = initialize_variables_MegaLMM(MegaLMM_state) # initialize the mod
 MegaLMM_state = initialize_MegaLMM(MegaLMM_state) # run the initial calculations
 MegaLMM_state = clear_Posterior(MegaLMM_state) # prepare the output directories
 
+MegaLMM_state$Posterior$posteriorSample_params = c('Lambda','F_h2','B2_F','Lambda_pi','B2_F_pi')#,'Eta_mean')
 ```
 
 
@@ -177,10 +178,11 @@ Then, you can ask for more samples, and repeat until you have enough.
 ```{r results="hide"}
 # The following code is optional, but tries to guess for your system how many CPUs to use for fastest processing
 n_threads = list(optim = RcppParallel::defaultNumThreads()-1)
+# n_threads=list(optim = 1)
 # (n_threads = optimize_n_threads(MegaLMM_state,seq(1,RcppParallel::defaultNumThreads(),by=1),times=2))
 set_MegaLMM_nthreads(n_threads$optim)
 # now do sampling is smallish chunks
-n_iter = 20;  # how many samples to collect at once?
+n_iter = 10;  # how many samples to collect at once?
 for(i  in 1:5) {
   print(sprintf('Run %d',i))
   MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)  # run MCMC chain n_samples iterations. grainSize is a paramter for parallelization (smaller = more parallelization)
