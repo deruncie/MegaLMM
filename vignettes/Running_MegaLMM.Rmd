@@ -143,9 +143,9 @@ MegaLMM_state = set_Missing_data_map(MegaLMM_state,maps$Missing_data_map)
 MegaLMM_state = set_priors_MegaLMM(MegaLMM_state,priors)  # apply the priors
 MegaLMM_state = initialize_variables_MegaLMM(MegaLMM_state) # initialize the model
 MegaLMM_state = initialize_MegaLMM(MegaLMM_state) # run the initial calculations
+MegaLMM_state$Posterior$posteriorSample_params = c('Lambda','F_h2','B2_F','Lambda_pi','B2_F_pi')#,'Eta_mean')
 MegaLMM_state = clear_Posterior(MegaLMM_state) # prepare the output directories
 
-MegaLMM_state$Posterior$posteriorSample_params = c('Lambda','F_h2','B2_F','Lambda_pi','B2_F_pi')#,'Eta_mean')
 ```
 
 
@@ -182,8 +182,8 @@ n_threads = list(optim = RcppParallel::defaultNumThreads()-1)
 # (n_threads = optimize_n_threads(MegaLMM_state,seq(1,RcppParallel::defaultNumThreads(),by=1),times=2))
 set_MegaLMM_nthreads(n_threads$optim)
 # now do sampling is smallish chunks
-n_iter = 10;  # how many samples to collect at once?
-for(i  in 1:5) {
+n_iter = 100;  # how many samples to collect at once?
+for(i  in 1:500) {
   print(sprintf('Run %d',i))
   MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)  # run MCMC chain n_samples iterations. grainSize is a paramter for parallelization (smaller = more parallelization)
   

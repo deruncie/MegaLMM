@@ -214,18 +214,18 @@ BEGIN_RCPP
 END_RCPP
 }
 // sample_tau2_delta_c_Eigen_v2
-Rcpp::List sample_tau2_delta_c_Eigen_v2(float tau2, float xi, VectorXf delta, VectorXf scores, float tau_0, float delta_shape, float delta_scale, int p, int times);
+Rcpp::List sample_tau2_delta_c_Eigen_v2(double tau2, double xi, VectorXd delta, VectorXd scores, double tau_0, double delta_shape, double delta_scale, int p, int times);
 RcppExport SEXP _MegaLMM_sample_tau2_delta_c_Eigen_v2(SEXP tau2SEXP, SEXP xiSEXP, SEXP deltaSEXP, SEXP scoresSEXP, SEXP tau_0SEXP, SEXP delta_shapeSEXP, SEXP delta_scaleSEXP, SEXP pSEXP, SEXP timesSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< float >::type tau2(tau2SEXP);
-    Rcpp::traits::input_parameter< float >::type xi(xiSEXP);
-    Rcpp::traits::input_parameter< VectorXf >::type delta(deltaSEXP);
-    Rcpp::traits::input_parameter< VectorXf >::type scores(scoresSEXP);
-    Rcpp::traits::input_parameter< float >::type tau_0(tau_0SEXP);
-    Rcpp::traits::input_parameter< float >::type delta_shape(delta_shapeSEXP);
-    Rcpp::traits::input_parameter< float >::type delta_scale(delta_scaleSEXP);
+    Rcpp::traits::input_parameter< double >::type tau2(tau2SEXP);
+    Rcpp::traits::input_parameter< double >::type xi(xiSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type delta(deltaSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type scores(scoresSEXP);
+    Rcpp::traits::input_parameter< double >::type tau_0(tau_0SEXP);
+    Rcpp::traits::input_parameter< double >::type delta_shape(delta_shapeSEXP);
+    Rcpp::traits::input_parameter< double >::type delta_scale(delta_scaleSEXP);
     Rcpp::traits::input_parameter< int >::type p(pSEXP);
     Rcpp::traits::input_parameter< int >::type times(timesSEXP);
     rcpp_result_gen = Rcpp::wrap(sample_tau2_delta_c_Eigen_v2(tau2, xi, delta, scores, tau_0, delta_shape, delta_scale, p, times));

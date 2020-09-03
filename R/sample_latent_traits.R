@@ -98,7 +98,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
         }
         # recover()
         # asdf=0
-        # # while(sum(is.na(new_samples$Y_prec)) == 0) {
+        # while(sum(is.na(new_samples$Y_prec)) == 0) {
         # while(T) {
         # asdf = asdf+1
         new_samples = regression_sampler_parallel(

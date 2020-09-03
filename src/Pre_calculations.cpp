@@ -13,14 +13,14 @@ using namespace Eigen;
 // [[Rcpp::export()]]
 List LDLt(SEXP A_) {
   if(Rf_isMatrix(A_)){
-    MatrixXf A = as<MatrixXf >(A_);
-    Eigen::LDLT<MatrixXf> ldlt_A;
+    MatrixXd A = as<MatrixXd >(A_);
+    Eigen::LDLT<MatrixXd> ldlt_A;
     ldlt_A.compute(A);
-    MatrixXf I = MatrixXf::Identity(ldlt_A.rows(), ldlt_A.rows());
-    MatrixXf P = ldlt_A.transpositionsP() * I;
-    VectorXf d = ldlt_A.vectorD();
-    MatrixXf L = ldlt_A.matrixL();
-    SpMat Lsp = L.sparseView();
+    MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
+    MatrixXd P = ldlt_A.transpositionsP() * I;
+    VectorXd d = ldlt_A.vectorD();
+    MatrixXd L = ldlt_A.matrixL();
+    SpMatd Lsp = L.sparseView();
     if(static_cast<float>(Lsp.nonZeros()) / I.size() > 0.25) {
       return(List::create(
           Named("P") = P.sparseView(),
@@ -35,11 +35,11 @@ List LDLt(SEXP A_) {
       ));
     }
   } else{
-    SpMat A = as<SpMat>(A_);
-    Eigen::SimplicialLDLT<SpMat> ldlt_A;
+    SpMatd A = as<SpMatd>(A_);
+    Eigen::SimplicialLDLT<SpMatd> ldlt_A;
     ldlt_A.compute(A);
-    MatrixXf I = MatrixXf::Identity(ldlt_A.rows(), ldlt_A.rows());
-    MatrixXf P = ldlt_A.permutationP() * I;
+    MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
+    MatrixXd P = ldlt_A.permutationP() * I;
     return(List::create(
         Named("P") = P.sparseView(),
         Named("L") = ldlt_A.matrixL(),

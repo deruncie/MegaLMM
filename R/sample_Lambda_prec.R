@@ -16,7 +16,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
   run_variables  = MegaLMM_state$run_variables
   run_parameters = MegaLMM_state$run_parameters
   current_state  = MegaLMM_state$current_state
-
+  
   current_state = with(c(priors,run_variables,run_parameters),
                        with(Lambda_prior,{
                          if(which_sampler$Y == 4) stop("Y sampler must be 1-3 for the horseshoe Lambda prior")
@@ -69,7 +69,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
                            new_samples = sample_tau2_delta_c_Eigen_v2(Lambda_tau2[1],Lambda_xi[1],delta,scores,
                                                                       tau_0,delta_shape,delta_scale,
                                                                       p,delta_iterations_factor)
-
+                           
                            Lambda_tau2[] = new_samples$tau2
                            Lambda_xi[] = new_samples$xi
                            delta[] = new_samples$delta

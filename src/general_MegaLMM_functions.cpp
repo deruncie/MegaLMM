@@ -1022,7 +1022,7 @@ Rcpp::List regression_sampler_parallel(
                                            randn_beta.col(j), randn_e.col(j),rgamma_1(0,j),Y_prec_b0[j]);
         } else if(which_sampler == 4) {
           b = 3*RinvtX2.cols();
-          // // RinvtX1 = chol_V.tsolve(X1);
+          // // RinvtX1 = chol_V.tsolve(X1);  // This causes malloc error. Why? Or sometimes it seems using this below.
           // VectorXf Rinvty = chol_V.tsolve(Y.col(j));
           // if(chol_V.isDense) {
           //   RinvtX1 = chol_V.dense.transpose().triangularView<Lower>().solve(X1);
@@ -1375,9 +1375,9 @@ MatrixXf sample_factors_scores_c( // returns nxk matrix
 // -- Sample tau2 and delta scores --- //
 // -------------------------------------------------- //
 
-VectorXf cumprod(const VectorXf& x) {
+VectorXd cumprod(const VectorXd& x) {
   int n = x.size();
-  VectorXf res(n);
+  VectorXd res(n);
   res[0] = x[0];
   if(n > 1) {
     for(int i = 1; i < n; i++){
@@ -1431,33 +1431,33 @@ VectorXf cumprod(const VectorXf& x) {
 // }
 // [[Rcpp::export()]]
 Rcpp::List sample_tau2_delta_c_Eigen_v2(
-    float tau2,
-    float xi,
-    VectorXf delta,
-    VectorXf scores,
-    float tau_0,
-    float delta_shape,
-    float delta_scale,  // shape and scale for inverse gamma distribution (shape and rate for Gamma)
+    double tau2,
+    double xi,
+    VectorXd delta,
+    VectorXd scores,
+    double tau_0,
+    double delta_shape,
+    double delta_scale,  // shape and scale for inverse gamma distribution (shape and rate for Gamma)
     int p,
     int times
 ) {
-
+  
   int K = scores.size();
   if(delta.size() != K) stop("Wrong size of delta");
-  float shape;
-  float scale;
-  VectorXf cumprod_delta = cumprod(delta);
+  double shape;
+  double scale;
+  VectorXd cumprod_delta = cumprod(delta);
   for(int i = 0; i < times; i++){
     // sample tau2
     shape = (p*K + 1)/2.0;
     scale = 1.0/xi + cumprod_delta.cwiseInverse().dot(scores);
     tau2 = 1.0/R::rgamma(shape,1.0/scale);
-
+    
     // sample xi
     shape = 1.0;
     scale = 1.0/(tau_0*tau_0) + 1.0/tau2;
     xi = 1.0/R::rgamma(shape,1.0/scale);
-
+    
     for(int h = 1; h < K; h++) {
       // delta_h
       shape = delta_shape + p*(K-h)/2.0;
@@ -1466,7 +1466,7 @@ Rcpp::List sample_tau2_delta_c_Eigen_v2(
       cumprod_delta = cumprod(delta);
     }
   }
-
+  
   return(Rcpp::List::create(Named("tau2") = tau2,
                             Named("xi") = xi,
                             Named("delta") = delta));

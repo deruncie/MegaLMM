@@ -335,9 +335,9 @@ plot_diagnostics = function(MegaLMM_state){
   if(MegaLMM_state$Posterior$total_samples > 0) {
     trace_plot_h2s(load_posterior_param(MegaLMM_state,'F_h2'))
     trace_plot_Lambda(load_posterior_param(MegaLMM_state,'Lambda'))
-    try({trace_plot_Lambda(load_posterior_param(MegaLMM_state,'B2_F'),main='B2_F')},silent=T)
+    try({trace_plot_Lambda(aperm(load_posterior_param(MegaLMM_state,'B2_F'),c(1,3,2)),main='B2_F')},silent=T)
     try({
-      B2_R = load_posterior_param(MegaLMM_state,'B2_R')[,-1,]
+      B2_R = aperm(load_posterior_param(MegaLMM_state,'B2_R')[,-1,],c(1,3,2))
       trace_plot_Lambda(B2_R,main='B2_R')},silent=T)
     # try({boxplot_Bs(load_posterior_param(MegaLMM_state,'B'),'B')},silent=T)
     try({
