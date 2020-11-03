@@ -8,6 +8,8 @@ Please treat this as a Beta version and let me know of issues running the functi
 devtools::install_github('deruncie/MegaLMM')
 ```
 
+Note: the package requires OpenMP which causes problems on a Mac. I was able to get everything to run by following these instructions: [https://mac.r-project.org/openmp/](https://mac.r-project.org/openmp/) including the addition to `~/.R/Makevars`. Installing on Unix-like machines and maybe Windows should cause fewer problems.
+
 ### Introduction:
 Please see the vignette `Running_MegaLMM.Rmd` for an introduction to using **MegaLMM**
 

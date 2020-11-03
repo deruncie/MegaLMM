@@ -4,13 +4,21 @@
 \alias{setup_model_MegaLMM}
 \title{Set up a MegaLMM model}
 \usage{
-setup_model_MegaLMM(Y, formula, extra_regressions = NULL, data,
-  relmat = NULL, cis_genotypes = NULL, Lambda_fixed = NULL,
+setup_model_MegaLMM(
+  Y,
+  formula,
+  extra_regressions = NULL,
+  data,
+  relmat = NULL,
+  cis_genotypes = NULL,
+  Lambda_fixed = NULL,
   run_parameters = MegaLMM_control(),
-  posteriorSample_params = c("Lambda", "U_F", "F", "delta", "tot_F_prec",
-  "F_h2", "tot_Eta_prec", "resid_h2", "B1", "B2_F", "B2_R", "U_R",
-  "cis_effects", "Lambda_m_eff"), posteriorMean_params = c(),
-  run_ID = "MegaLMM_run")
+  posteriorSample_params = c("Lambda", "U_F", "F", "delta", "tot_F_prec", "F_h2",
+    "tot_Eta_prec", "resid_h2", "B1", "B2_F", "B2_R", "U_R", "cis_effects",
+    "Lambda_m_eff", "Lambda_pi", "B2_R_pi", "B2_F_pi"),
+  posteriorMean_params = c(),
+  run_ID = "MegaLMM_run"
+)
 }
 \arguments{
 \item{Y}{either a) a n x p matrix of data (n individuals x p traits), or b) a list describing

@@ -4,20 +4,39 @@
 \alias{regression_sampler_parallel}
 \title{Draws samples from all ``fixed" coefficients (fixed and random) of a set of parallel linear regression models, conditional on the variance components.}
 \usage{
-regression_sampler_parallel(Y, W_base, W_list_, X, V_, h2s_index,
-  chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1,
-  prior_prec_alpha2, prior_mean_beta, prior_prec_beta)
+regression_sampler_parallel(
+  which_sampler,
+  Y,
+  X1_base,
+  X1_list_,
+  X2_,
+  Vx_,
+  h2s_index,
+  chol_V_list_,
+  Y_prec,
+  Y_prec_a0,
+  Y_prec_b0,
+  prior_prec_alpha1,
+  prior_prec_alpha2,
+  prior_mean_beta,
+  prior_prec_beta,
+  current_alpha1s_,
+  current_alpha2s_,
+  BayesAlphabet_parms
+)
 }
 \arguments{
+\item{which_sampler}{int: \itemize{
+  \item 1: block sampler: b < n
+  \item 2: block sampler: n >= b and X doesn't factorize
+  \item 3: block sampler: n >= b, but X factorizes into UxVx where Ux is n x m and Vx = m x b, and m << n <= b
+}}
+
 \item{Y}{n x p matrix of observations}
 
-\item{W_base}{n x a1 matrix of W covariates common to all p. Can be NULL}
+\item{X1_base}{n x a1 matrix of X1 covariates common to all p. Can be NULL}
 
-\item{W_list_}{p-list of n x a2 matrices of W covariates unique to each p. Can be NULL}
-
-\item{X}{either X, a n x b matrix, or U, a n x m matrix. If U, then V must be non-NULL}
-
-\item{V_}{m x b matrix if X is U, otherwise NULL}
+\item{X1_list_}{p-list of n x a2 matrices of X1 covariates unique to each p. Can be NULL}
 
 \item{h2s_index}{p-vector of indices for to select appropriate V of each trait}
 
@@ -34,6 +53,20 @@ regression_sampler_parallel(Y, W_base, W_list_, X, V_, h2s_index,
 \item{prior_mean_beta}{b x p matrix of prior means of beta}
 
 \item{prior_prec_beta}{b x p matrix of prior precisions of beta}
+
+\item{X2}{either X2, a n x b matrix, or Ux, a n x m matrix. If Ux, then V must be non-NULL}
+
+\item{V_}{m x b matrix if X2 is Ux, otherwise NULL}
+
+\item{beta1_list_}{p-list of a2-vectors for X1 coefficients. Can be NULL}
+
+\item{beta2}{a b x p matrix of current values for beta}
+
+\item{beta2_alpha_}{b x p matrix for BayesC priors for beta2. Can be NULL}
+
+\item{beta2_delta_}{b x p matrix for BayesC priors for beta2. Can be NULL,}
+
+\item{beta2_p_i_}{b x p matrix for BayesC priors for beta2. Can be NULL}
 }
 \value{
 List with elements: \itemize{
@@ -41,13 +74,15 @@ List with elements: \itemize{
   \item alpha2 concatenated vector of alpha2 for all traits
   \item beta b x p matrix of beta
   \item Y_prec p x 1 vector of Y_prec
+  \item beta2_alpha b x p matrix (optional)
+  \item beta2_delta_ b x p matrix (optional)
 }
 }
 \description{
 The model is either: \itemize{
-\item y_i = W_base*alpha1 + W_list_[i]*alpha2 + X*beta + e, e ~ N(0,1/Y_prec[i]*V)
-\item y_i = W_base*alpha1 + W_list_[i]*alpha2 + X*V_*beta + e, e ~ N(0,1/Y_prec[i]*V)
+\item y_i = X1_base*alpha1 + X1_list_[i]*alpha2 + X2*beta + e, e ~ N(0,1/Y_prec[i]*V)
+\item y_i = X1_base*alpha1 + X1_list_[i]*alpha2 + X2*V_*beta + e, e ~ N(0,1/Y_prec[i]*V)
 }
-where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
+Where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
 Each column of Y is considered independent
 }

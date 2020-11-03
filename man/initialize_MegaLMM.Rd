@@ -4,8 +4,13 @@
 \alias{initialize_MegaLMM}
 \title{Initialized Gibbs sampler for MegaLMM model}
 \usage{
-initialize_MegaLMM(MegaLMM_state, ncores = my_detectCores(),
-  Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL)
+initialize_MegaLMM(
+  MegaLMM_state,
+  ncores = my_detectCores(),
+  Qt_list = NULL,
+  chol_R_list = NULL,
+  chol_ZKZt_list = NULL
+)
 }
 \arguments{
 \item{MegaLMM_state}{MegaLMM_state object as returned by \link{setup_model_MegaLMM}}

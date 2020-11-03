@@ -4,7 +4,7 @@
 \alias{summary.MegaLMM_state}
 \title{Print more detailed statistics on current MegaLMM state}
 \usage{
-summary.MegaLMM_state(MegaLMM_state)
+\method{summary}{MegaLMM_state}(MegaLMM_state)
 }
 \description{
 Print more detailed statistics on current MegaLMM state

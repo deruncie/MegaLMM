@@ -936,7 +936,7 @@ summary.MegaLMM_state = function(MegaLMM_state){
       c(sprintf('Model dimensions: factors = %d, fixed = %d, regression_R = %d, regression_F = %d, random = %d \n',
                 current_state$K,
                 ncol(data_matrices$X1),
-                ncol(data_matrices(X2_R)),ncol(data_matrices(X2_F)),
+                ncol(data_matrices$X2_R),ncol(data_matrices$X2_F),
                 ncol(data_matrices$ZL))),
       c(sprintf('Sampler: %s \n',run_parameters$sampler)),
       c(sprintf('Current iteration: %d, Posterior_samples: %d \n',current_state$nrun,Posterior$total_samples)),
@@ -950,6 +950,7 @@ summary.MegaLMM_state = function(MegaLMM_state){
 #' Print statistics on current MegaLMM state
 #' @seealso \code{\link{MegaLMM_control}}, \code{\link{sample_MegaLMM}}, \code{\link{MegaLMM_init}},
 #'   \code{\link{summary.MegaLMM_state}}, \code{\link{plot.MegaLMM_state}}
+#' @export
 print.MegaLMM_state = function(MegaLMM_state){
   with(MegaLMM_state,{
     cat(

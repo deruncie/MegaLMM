@@ -4,17 +4,20 @@
 \alias{MegaLMM_priors}
 \title{Set MegaLMM priors}
 \usage{
-MegaLMM_priors(tot_Y_var = list(V = 0.5, nu = 3), tot_F_var = list(V =
-  18/20, nu = 20), h2_priors_resids_fun = function(h2s, n) 1,
+MegaLMM_priors(
+  tot_Y_var = list(V = 0.5, nu = 3),
+  tot_F_var = list(V = 18/20, nu = 20),
+  h2_priors_resids_fun = function(h2s, n) 1,
   h2_priors_factors_fun = function(h2s, n) 1,
-  Lambda_prior = list(sampler = sample_Lambda_prec_horseshoe, prop_0 =
-  0.1, delta_l = list(shape = 3, rate = 1), delta_iterations_factor = 100),
+  Lambda_prior = list(sampler = sample_Lambda_prec_horseshoe, prop_0 = 0.1, delta_l =
+    list(shape = 3, rate = 1), delta_iterations_factor = 100),
   B2_prior = list(sampler = sample_B2_prec_horseshoe, prop_0 = 0.1),
-  cis_effects_prior = list(prec = 1))
+  cis_effects_prior = list(prec = 1)
+)
 }
 \arguments{
 \item{tot_Y_var}{List of parameters of inverse gamma distribution for residual variances, specifically:
-\code{V} and \code{nu}, give shape = \code{nu/2} and scale = \code{nu*V/2}, so mean = \code{(V*nu)/(nu-2)}}
+\code{V} and \code{nu}, give shape = \code{nu-1} and scale = \code{1/(nu*V)}, so mean = \code{~V}}
 
 \item{tot_F_var}{List of parameters of inverse gamma distribution for factor variances. See \code{tot_Y_var}.
 This parameter provides the parameter extension of Ghosh and Dunson (2009), but is removed

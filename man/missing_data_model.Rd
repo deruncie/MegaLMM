@@ -31,14 +31,14 @@ Function to sample missing data given model parameters.
 \details{
 This is also a template for \code{data_model} functions.
 
-The function should draw a posterior sample for Eta (the (potentially) latent
+   The function should draw a posterior sample for Eta (the (potentially) latent
    data on the linear scale) given the factor model and the observed data. It returns a list
    with Eta and any other variables associated with the data_model.
    These variables are added to current_state, but are not currently saved in Posterior
 
-Initial values, hyperparameters, and any helper functions / parameters can be passed
+   Initial values, hyperparameters, and any helper functions / parameters can be passed
    in \code{observation_model_parameters}.
 
-When run with an empty \code{current_state} and \code{data_matrices == NULL}, it should return
+   When run with an empty \code{current_state} and \code{data_matrices == NULL}, it should return
    a matrix Eta of the correct dimensions, but the values are unimportant.
 }
