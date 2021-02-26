@@ -263,7 +263,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
 
   # -------- regressions ---------- #
   # X2_F and X2_R (and V_F and V_R) are the coefficient matrices for the regularized regression coefficients
-  # these are specifed as lists with either X (n x b) or {U(nxm),V(mxb)}
+  # these are specified as lists with either X (n x b) or {U(nxm),V(mxb)}
   X2_R = matrix(0,n,0)
   X2_F = matrix(0,n,0)
   U2_F = X2_F
@@ -659,9 +659,11 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
 
     B2_R = 0*matrix(rnorm(b2_R*p),b2_R,ncol = p)
     colnames(B2_R) = traitnames
+    rownames(B2_R) = colnames(X2_R)
 
     # Factor fixed effects
     B2_F = 0*matrix(rnorm(b2_F * K),b2_F,K)
+    rownames(B2_F) = colnames(X2_F)
 
     XB = X1 %**% B1 + X2_R %*% B2_R
 
