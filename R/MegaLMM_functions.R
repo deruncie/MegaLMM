@@ -192,7 +192,7 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
       current_state[[param]] = current_state[[param]][,factor_order_withFixed,drop=FALSE]
     } else{
       # for Lambda parameters
-      current_state[[param]] = current_state[[param]][factor_order,,drop=FALSE]
+      current_state[[param]] = current_state[[param]][,factor_order,drop=FALSE]
     }
   }
   current_state$delta[1] = 1
