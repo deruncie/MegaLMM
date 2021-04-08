@@ -185,14 +185,17 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
                      'F','B2_F','U_F','F_h2','F_e_prec','tot_F_prec', 'B2_F_prec'
   )
 
-  # reorder currrent state
+  # reorder current state
   for(param in reorder_params){
     if(! param %in% names(current_state)) next
     if(ncol(current_state[[param]]) == nrow(Lambda)) {
       current_state[[param]] = current_state[[param]][,factor_order_withFixed,drop=FALSE]
+    } else if(nrow(current_state[[param]]) == nrow(Lambda)){
+      # for Lambda
+      current_state[[param]] = current_state[[param]][factor_order_withFixed,,drop=FALSE]
     } else{
       # for Lambda parameters
-      current_state[[param]] = current_state[[param]][,factor_order,drop=FALSE]
+      current_state[[param]] = current_state[[param]][factor_order,,drop=FALSE]
     }
   }
   current_state$delta[1] = 1

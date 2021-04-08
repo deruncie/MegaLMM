@@ -41,7 +41,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
                              Lambda_xi = matrix(1,1,1)
                              Lambda_phi2 = matrix(1,Kr,p)
                              Lambda_nu = matrix(1,Kr,p)
-                             delta = with(priors,matrix(c(1,1/rgamma(Kr-1,shape = delta_shape,rate = 1/delta_scale)),nrow=1))
+                             delta = with(priors,matrix(c(1,1/rgamma(Kr-1,shape = delta_shape,rate = 1/delta_scale)),ncol=1))
                              Lambda_prec = matrix(1,Kr,p)
                              trunc_point_delta = 1
                              Lambda_m_eff = matrix(1,Kr,1)
@@ -71,7 +71,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
 
                            Lambda_tau2[] = new_samples$tau2
                            Lambda_xi[] = new_samples$xi
-                           delta[] = new_samples$delta
+                           delta[,1] = new_samples$delta
 
                            # -----Update Plam-------------------- #
                            # Lambda_prec[] = 1/(Lambda_tau2[1] * sweep(Lambda_phi2,1,cumprod(delta),'/')) # with delta~Ga
@@ -112,8 +112,8 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
 
                            # initialize variables if needed
                            if(!exists('delta')){
-                             delta = with(priors,matrix(c(rgamma(1,shape = delta_1_shape,rate = delta_1_rate),rgamma(Kr-1,shape = delta_2_shape,rate = delta_2_rate)),nrow=1))
-                             tauh  = matrix(cumprod(delta),nrow=1)
+                             delta = with(priors,matrix(c(rgamma(1,shape = delta_1_shape,rate = delta_1_rate),rgamma(Kr-1,shape = delta_2_shape,rate = delta_2_rate)),ncol=1))
+                             tauh  = matrix(cumprod(delta),ncol=1)
                              Lambda_phi = Lambda_prec = matrix(1,Kr,p)
                              trunc_point_delta = 1
                            }
@@ -132,8 +132,8 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                            # randg_draws = matrix(rgamma(times*Kr,shape = shapes,rate = 1),nr=times,byrow=T)
                            # delta[] = sample_delta_c_Eigen( delta,tauh,scores,delta_1_rate,delta_2_rate,randg_draws)
                            randu_draws = matrix(runif(times*Kr),nr=times)
-                           delta[] = sample_trunc_delta_c_Eigen( delta,tauh,scores,shapes,delta_1_rate,delta_2_rate,randu_draws,trunc_point_delta)
-                           tauh[]  = matrix(cumprod(delta),nrow=1)
+                           delta[,1] = sample_trunc_delta_c_Eigen( delta,tauh,scores,shapes,delta_1_rate,delta_2_rate,randu_draws,trunc_point_delta)
+                           tauh[]  = matrix(cumprod(delta),ncol=1)
 
                            Lambda_prec[] = sweep(Lambda_phi,1,tauh,'*')
                        })
