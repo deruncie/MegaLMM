@@ -149,6 +149,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
         # Y_prec -> tot_Eta_prec
         if(any(is.na(new_samples$Y_prec))) break
         tot_Eta_prec[cols] = new_samples$Y_prec
+
       }
       
     }
