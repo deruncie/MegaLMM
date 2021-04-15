@@ -21,7 +21,7 @@ using namespace Eigen;
 //' @param X_ First matrix (matrix or dgCMatrix)
 //' @param Y_ Second matrix (matrix)
 //' @return Product of X_ and Y_ as a dense matrix
-// [[Rcpp::export()]]
+// [[Rcpp::export()]] 
 MatrixXf matrix_multiply_toDense(SEXP X_, SEXP Y_){
   if(Rf_isNull(X_)) return(as<MatrixXf >(Y_));
   if(Rf_isMatrix(X_)) {

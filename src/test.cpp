@@ -4,6 +4,51 @@
 // 
 // using namespace Eigen;
 // 
+// 
+// // [[Rcpp::export()]]
+// List LDLt2(SEXP A_) {
+//   if(Rf_isMatrix(A_)){
+//     MatrixXd A = as<MatrixXd >(A_);
+//     Eigen::LDLT<MatrixXd> ldlt_A;
+//     ldlt_A.compute(A);
+//     MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
+//     MatrixXd P = ldlt_A.transpositionsP() * I;
+//     VectorXd d = ldlt_A.vectorD();
+//     MatrixXd L = ldlt_A.matrixL();
+//     SpMatd Lsp = L.sparseView();
+//     if(static_cast<float>(Lsp.nonZeros()) / I.size() > 0.25) {
+//       return(List::create(
+//           Named("P") = P.sparseView(),
+//           Named("L") = L,
+//           Named("d") = d
+//       ));
+//     } else{
+//       return(List::create(
+//           Named("P") = P.sparseView(),
+//           Named("L") = Lsp,
+//           Named("d") = d
+//       ));
+//     }
+//   } else{
+//     SpMatd A = as<SpMatd>(A_);
+//     Eigen::SimplicialLDLT<SpMatd> ldlt_A;
+//     ldlt_A.compute(A);
+//     if(ldlt_A.info() != Eigen::Success) {
+//       // LDLt failed? Try again as a dense matrix
+//       MatrixXd Ad = A.toDense();
+//       return(LDLt2(wrap(Ad)));
+//     } else {
+//       MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
+//       MatrixXd P = ldlt_A.permutationP() * I;
+//       return(List::create(
+//           Named("P") = P.sparseView(),
+//           Named("L") = ldlt_A.matrixL(),
+//           Named("d") = ldlt_A.vectorD()
+//       ));
+//     }
+//   }
+// }
+// 
 // MatrixXf rstdnorm_mat2(int n,int p) {  // returns nxp matrix
 //   VectorXd X_vec(n*p);
 //   for(int i = 0; i < n*p; i++){

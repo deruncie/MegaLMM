@@ -606,7 +606,7 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
   priors = MegaLMM_state$priors
 
   MegaLMM_state$current_state = with(c(run_parameters,run_variables,data_matrices,priors),{
-
+    
     # Factors loadings:
 
     Lambda_prec = matrix(1,K,p)

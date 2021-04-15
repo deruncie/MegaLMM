@@ -52,24 +52,24 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
                            Lambda2_std = sweep(Lambda2,2,tot_Eta_prec[1,]/2,'*')
 
                            Lambda_nu[] = matrix(1/rgamma(Kr*p,shape = 1, rate = 1 + 1/Lambda_phi2), nr = Kr, nc = p)
-                           # Lambda2_std_delta = sweep(Lambda2_std,2, cumprod(delta),'*')  # with delta~Ga
+                           # Lambda2_std_delta = sweep(Lambda2_std,1, cumprod(delta),'*')  # with delta~Ga
                            Lambda2_std_delta = sweep(Lambda2_std,1, cumprod(delta),'/') # with delta~iG
                            Lambda_phi2[] = matrix(1/rgamma(Kr*p,shape = 1, rate = 1/Lambda_nu + Lambda2_std_delta / Lambda_tau2[1]),nr=Kr,nc = p)
 
                            scores = rowSums(Lambda2_std / Lambda_phi2)
                            # for(i in 1:delta_iterations_factor) {
-                           #   cumprod_delta = cumprod(delta[1,])
+                           #   cumprod_delta = cumprod(delta[,1])
                            #   Lambda_tau2[] = 1/rgamma(1,shape = (Kr*p+1)/2, rate = 1/Lambda_xi[1] + sum(cumprod_delta*scores))
                            #   Lambda_xi[] = 1/rgamma(1,shape = 1,rate = 1/tau_0^2 + 1/Lambda_tau2[1])
                            #   for(h in 2:Kr) {
-                           #     delta[h] = rgamma(1,shape = delta_l_shape + p/2*(Kr-h+1),rate = delta_l_rate + sum(cumprod_delta[h:Kr]*scores[h:Kr])/(Lambda_tau2[1]*delta[h]))
-                           #     cumprod_delta = cumprod(delta[1,])
+                           #     delta[h] = rgamma(1,shape = delta_shape + p/2*(Kr-h+1),rate = 1/delta_scale + sum(cumprod_delta[h:Kr]*scores[h:Kr])/(Lambda_tau2[1]*delta[h]))
+                           #     cumprod_delta = cumprod(delta[,1])
                            #   }
                            # }
                            new_samples = sample_tau2_delta_c_Eigen_v2(Lambda_tau2[1],Lambda_xi[1],delta,scores,
                                                                       tau_0,delta_shape,delta_scale,
                                                                       p,delta_iterations_factor)
-                           
+
                            Lambda_tau2[] = new_samples$tau2
                            Lambda_xi[] = new_samples$xi
                            delta[,1] = new_samples$delta
@@ -78,11 +78,11 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
                            # Lambda_prec[] = 1/(Lambda_tau2[1] * sweep(Lambda_phi2,1,cumprod(delta),'/')) # with delta~Ga
                            Lambda_prec[] = 1/(Lambda_tau2[1] * sweep(Lambda_phi2,1,cumprod(delta),'*'))  # with delta~iG
 
-                           # ----- Calcualte m_eff -------------- #
+                           # ----- Calculate m_eff -------------- #
                            kappa = 1/(1+n/Lambda_prec)
                            Lambda_m_eff[] = rowSums(1-kappa)
-
-                           rm(list = c('Lambda2','Lambda2_std','Lambda2_std_delta','scores','new_samples','kappa'))
+                           
+                           # rm(list = c('Lambda2','Lambda2_std','Lambda2_std_delta','scores','new_samples','kappa'))
                          })
                        }))
   return(current_state)
