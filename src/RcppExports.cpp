@@ -141,12 +141,12 @@ BEGIN_RCPP
 END_RCPP
 }
 // sample_MME_ZKZts_c
-MatrixXd sample_MME_ZKZts_c(MatrixXd Y, MSpMatd Z, VectorXd tot_Eta_prec, Rcpp::List chol_ZtZ_Kinv_list_, MatrixXd h2s, VectorXi h2s_index);
+MatrixXd sample_MME_ZKZts_c(Map<MatrixXd> Y, MSpMatd Z, VectorXd tot_Eta_prec, Rcpp::List chol_ZtZ_Kinv_list_, MatrixXd h2s, VectorXi h2s_index);
 RcppExport SEXP _MegaLMM_sample_MME_ZKZts_c(SEXP YSEXP, SEXP ZSEXP, SEXP tot_Eta_precSEXP, SEXP chol_ZtZ_Kinv_list_SEXP, SEXP h2sSEXP, SEXP h2s_indexSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< MatrixXd >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< Map<MatrixXd> >::type Y(YSEXP);
     Rcpp::traits::input_parameter< MSpMatd >::type Z(ZSEXP);
     Rcpp::traits::input_parameter< VectorXd >::type tot_Eta_prec(tot_Eta_precSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type chol_ZtZ_Kinv_list_(chol_ZtZ_Kinv_list_SEXP);

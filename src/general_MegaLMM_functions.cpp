@@ -1169,7 +1169,7 @@ Rcpp::List regression_sampler_parallel(
 VectorXd sample_MME_single_diagR(
     VectorXd y,           // nx1
     MSpMatd Z,    // nxr dgCMatrix or dense
-    SpMatd chol_ZtZ_Kinv,       // rxr CsparseMatrix upper triangular: chol(ZtRinvZ + diag(Kinv))
+    MSpMatd chol_ZtZ_Kinv,       // rxr CsparseMatrix upper triangular: chol(ZtRinvZ + diag(Kinv))
     double tot_Eta_prec,   // float
     double pe,            // float
     VectorXd randn_theta  // rx1
@@ -1196,7 +1196,7 @@ VectorXd sample_MME_single_diagR(
 
 // [[Rcpp::export()]]
 MatrixXd sample_MME_ZKZts_c(
-    MatrixXd Y,                    // nxp
+    Map<MatrixXd> Y,                    // nxp
     MSpMatd Z,
     VectorXd tot_Eta_prec,         // px1
     Rcpp::List chol_ZtZ_Kinv_list_,      // List or R st RtR = ZtZ_Kinv
