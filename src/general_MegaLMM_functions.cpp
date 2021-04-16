@@ -74,6 +74,15 @@ MatrixXf rstdnorm_mat(int n,int p) {  // returns nxp matrix
   return(X_mat.cast<float>());
 }
 
+MatrixXd rstdnorm_mat_d(int n,int p) {  // returns nxp matrix
+  VectorXd X_vec(n*p);
+  for(int i = 0; i < n*p; i++){
+    X_vec[i] = ziggr.norm();
+  }
+  MatrixXd X_mat = Map<MatrixXd>(X_vec.data(),n,p);
+  return(X_mat);
+}
+
 
 //' Finds the set of variance component proportions within a specified distance from a starting proportion
 //'
@@ -1198,9 +1207,9 @@ VectorXd sample_MME_single_diagR(
 MatrixXd sample_MME_ZKZts_c(
     Map<MatrixXd> Y,                    // nxp
     MSpMatd Z,
-    VectorXd tot_Eta_prec,         // px1
+    Map<VectorXd> tot_Eta_prec,         // px1
     Rcpp::List chol_ZtZ_Kinv_list_,      // List or R st RtR = ZtZ_Kinv
-    MatrixXd h2s,                  // n_RE x p
+    Map<MatrixXd> h2s,                  // n_RE x p
     VectorXi h2s_index                 // px1
 ) {
   
@@ -1215,7 +1224,7 @@ MatrixXd sample_MME_ZKZts_c(
   // }
   
   // MatrixXd randn_theta = rstdnorm_mat2(r,p).cast<double>();
-  MatrixXd randn_theta = rstdnorm_mat(r,p).cast<double>();
+  MatrixXd randn_theta = rstdnorm_mat_d(r,p);
   
   std::vector<MSpMatd> chol_ZtZ_Kinv_list;
   int m = chol_ZtZ_Kinv_list_.size();
