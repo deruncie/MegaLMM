@@ -95,8 +95,8 @@ regression_sampler_parallel <- function(which_sampler, Y, X1_base, X1_list_, X2_
     .Call(`_MegaLMM_regression_sampler_parallel`, which_sampler, Y, X1_base, X1_list_, X2_, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta, current_alpha1s_, current_alpha2s_, BayesAlphabet_parms)
 }
 
-sample_MME_ZKZts_c <- function(Y, Z_, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index) {
-    .Call(`_MegaLMM_sample_MME_ZKZts_c`, Y, Z_, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index)
+sample_MME_ZKZts_c <- function(Y, Z, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index) {
+    .Call(`_MegaLMM_sample_MME_ZKZts_c`, Y, Z, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index)
 }
 
 log_p_h2s <- function(Y, tot_Eta_prec, chol_V_list_, discrete_priors) {

@@ -1094,16 +1094,88 @@ Rcpp::List regression_sampler_parallel(
 // e[i] ~ N(0,1/tot_Eta_prec)
 // C = ZtRinvZ + diag(Kinv)
 //// [[Rcpp::export()]]
-VectorXf sample_MME_single_diagR(
-    VectorXf y,           // nx1
-    General_Matrix_f Z,    // nxr dgCMatrix or dense
-    SpMat chol_ZtZ_Kinv,       // rxr CsparseMatrix upper triangular: chol(ZtRinvZ + diag(Kinv))
-    float tot_Eta_prec,   // float
-    float pe,            // float
-    VectorXf randn_theta  // rx1
+// VectorXf sample_MME_single_diagR(
+//     VectorXf y,           // nx1
+//     General_Matrix_f Z,    // nxr dgCMatrix or dense
+//     SpMat chol_ZtZ_Kinv,       // rxr CsparseMatrix upper triangular: chol(ZtRinvZ + diag(Kinv))
+//     float tot_Eta_prec,   // float
+//     float pe,            // float
+//     VectorXf randn_theta  // rx1
+// ){
+//   VectorXf b;
+//   b = Z.crossprod(y)*pe;
+//   // if(Rf_isMatrix(Z_)) {
+//   //   MatrixXf Z = as<MatrixXf>(Z_);
+//   //   b = Z.transpose() * y * pe;
+//   // } else{
+//   //   SpMat Z = as<SpMat>(Z_);
+//   //   b = Z.transpose() * y * pe;
+//   // }
+//   // if(Z.isDense) {
+//   //   b = Z.dense.transpose() * y * pe;
+//   // } else{
+//   //   b = Z.sparse.transpose() * y * pe;
+//   // }
+//   b = chol_ZtZ_Kinv.transpose().triangularView<Lower>().solve(b / sqrt(tot_Eta_prec));
+//   b += randn_theta;
+//   b = chol_ZtZ_Kinv.triangularView<Upper>().solve(b / sqrt(tot_Eta_prec));
+//   return(b);
+// }
+// 
+// 
+// // samples random effects from model:
+// // Y = ZU + E
+// // U[,j] ~ N(0,1/tot_Eta_prec[j] * h2[j] * K)
+// // E[,j] ~ N(0,1/tot_Eta_prec[j] * (1-h2[j]) * I_n)
+// // For complete data, ie no missing obs.
+// // [[Rcpp::export()]]
+// MatrixXf sample_MME_ZKZts_c(
+//     MatrixXf Y,                    // nxp
+//     SEXP Z_,
+//     VectorXf tot_Eta_prec,         // px1
+//     Rcpp::List chol_ZtZ_Kinv_list_,      // List or R st RtR = ZtZ_Kinv
+//     MatrixXf h2s,                  // n_RE x p
+//     VectorXi h2s_index                 // px1
+//     ) {
+// 
+//   General_Matrix_f Z = load_General_Matrix_f(Z_,false);
+// 
+//   int p = Y.cols();
+//   int r = Z.cols();
+//   // if(Z.isDense) {
+//   //   r = Z.dense.cols();
+//   // } else{
+//   //   r = Z.sparse.cols();
+//   // }
+// 
+//   MatrixXf randn_theta = rstdnorm_mat(r,p);
+// 
+//   std::vector<General_Matrix_f> chol_ZtZ_Kinv_list;
+//   load_General_Matrix_f_list(chol_ZtZ_Kinv_list_, chol_ZtZ_Kinv_list, true);
+// 
+//   MatrixXf U(r,p);
+//   ArrayXf h2_e = 1.0 - h2s.colwise().sum().array();
+//   ArrayXf pes = tot_Eta_prec.array() / h2_e.array();
+// 
+//   #pragma omp parallel for
+//   for(std::size_t j = 0; j < p; j++){
+//     int h2_index = h2s_index[j] - 1;
+//     // ZtZ_Kinv needs to be scaled by tot_Eta_prec[j].
+//     U.col(j) = sample_MME_single_diagR(Y.col(j), Z, chol_ZtZ_Kinv_list[h2_index].sparse, tot_Eta_prec[j], pes[j],randn_theta.col(j));
+//   }
+// 
+//   return(U);
+// }
+VectorXd sample_MME_single_diagR(
+    VectorXd y,           // nx1
+    MSpMatd Z,    // nxr dgCMatrix or dense
+    SpMatd chol_ZtZ_Kinv,       // rxr CsparseMatrix upper triangular: chol(ZtRinvZ + diag(Kinv))
+    double tot_Eta_prec,   // float
+    double pe,            // float
+    VectorXd randn_theta  // rx1
 ){
-  VectorXf b;
-  b = Z.crossprod(y)*pe;
+  VectorXd b;
+  b = Z.transpose()* y *pe;
   // if(Rf_isMatrix(Z_)) {
   //   MatrixXf Z = as<MatrixXf>(Z_);
   //   b = Z.transpose() * y * pe;
@@ -1122,24 +1194,18 @@ VectorXf sample_MME_single_diagR(
   return(b);
 }
 
-
-// samples random effects from model:
-// Y = ZU + E
-// U[,j] ~ N(0,1/tot_Eta_prec[j] * h2[j] * K)
-// E[,j] ~ N(0,1/tot_Eta_prec[j] * (1-h2[j]) * I_n)
-// For complete data, ie no missing obs.
 // [[Rcpp::export()]]
-MatrixXf sample_MME_ZKZts_c(
-    MatrixXf Y,                    // nxp
-    SEXP Z_,
-    VectorXf tot_Eta_prec,         // px1
+MatrixXd sample_MME_ZKZts_c(
+    MatrixXd Y,                    // nxp
+    MSpMatd Z,
+    VectorXd tot_Eta_prec,         // px1
     Rcpp::List chol_ZtZ_Kinv_list_,      // List or R st RtR = ZtZ_Kinv
-    MatrixXf h2s,                  // n_RE x p
+    MatrixXd h2s,                  // n_RE x p
     VectorXi h2s_index                 // px1
-    ) {
-
-  General_Matrix_f Z = load_General_Matrix_f(Z_,false);
-
+) {
+  
+  // General_Matrix_fq Z = load_General_Matrix_fq2(Z_,false);
+  
   int p = Y.cols();
   int r = Z.cols();
   // if(Z.isDense) {
@@ -1147,23 +1213,30 @@ MatrixXf sample_MME_ZKZts_c(
   // } else{
   //   r = Z.sparse.cols();
   // }
-
-  MatrixXf randn_theta = rstdnorm_mat(r,p);
-
-  std::vector<General_Matrix_f> chol_ZtZ_Kinv_list;
-  load_General_Matrix_f_list(chol_ZtZ_Kinv_list_, chol_ZtZ_Kinv_list, true);
-
-  MatrixXf U(r,p);
-  ArrayXf h2_e = 1.0 - h2s.colwise().sum().array();
-  ArrayXf pes = tot_Eta_prec.array() / h2_e.array();
-
-  #pragma omp parallel for
+  
+  // MatrixXd randn_theta = rstdnorm_mat2(r,p).cast<double>();
+  MatrixXd randn_theta = rstdnorm_mat(r,p).cast<double>();
+  
+  std::vector<MSpMatd> chol_ZtZ_Kinv_list;
+  int m = chol_ZtZ_Kinv_list_.size();
+  chol_ZtZ_Kinv_list.reserve(m);
+  for(int i = 0; i < m; i++){
+    SEXP Xi_ = chol_ZtZ_Kinv_list_[i];
+    chol_ZtZ_Kinv_list.push_back(as<MSpMatd> (Xi_));
+  }
+  // load_General_Matrix_fq_list2(chol_ZtZ_Kinv_list_, chol_ZtZ_Kinv_list, true);
+  
+  MatrixXd U(r,p);
+  ArrayXd h2_e = 1.0 - h2s.colwise().sum().array();
+  ArrayXd pes = tot_Eta_prec.array() / h2_e.array();
+  
+#pragma omp parallel for
   for(std::size_t j = 0; j < p; j++){
     int h2_index = h2s_index[j] - 1;
     // ZtZ_Kinv needs to be scaled by tot_Eta_prec[j].
-    U.col(j) = sample_MME_single_diagR(Y.col(j), Z, chol_ZtZ_Kinv_list[h2_index].sparse, tot_Eta_prec[j], pes[j],randn_theta.col(j));
+    U.col(j) = sample_MME_single_diagR(Y.col(j), Z, chol_ZtZ_Kinv_list[h2_index], tot_Eta_prec[j], pes[j],randn_theta.col(j));
   }
-
+  
   return(U);
 }
 

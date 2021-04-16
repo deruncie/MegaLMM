@@ -141,18 +141,18 @@ BEGIN_RCPP
 END_RCPP
 }
 // sample_MME_ZKZts_c
-MatrixXf sample_MME_ZKZts_c(MatrixXf Y, SEXP Z_, VectorXf tot_Eta_prec, Rcpp::List chol_ZtZ_Kinv_list_, MatrixXf h2s, VectorXi h2s_index);
-RcppExport SEXP _MegaLMM_sample_MME_ZKZts_c(SEXP YSEXP, SEXP Z_SEXP, SEXP tot_Eta_precSEXP, SEXP chol_ZtZ_Kinv_list_SEXP, SEXP h2sSEXP, SEXP h2s_indexSEXP) {
+MatrixXd sample_MME_ZKZts_c(MatrixXd Y, MSpMatd Z, VectorXd tot_Eta_prec, Rcpp::List chol_ZtZ_Kinv_list_, MatrixXd h2s, VectorXi h2s_index);
+RcppExport SEXP _MegaLMM_sample_MME_ZKZts_c(SEXP YSEXP, SEXP ZSEXP, SEXP tot_Eta_precSEXP, SEXP chol_ZtZ_Kinv_list_SEXP, SEXP h2sSEXP, SEXP h2s_indexSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< MatrixXf >::type Y(YSEXP);
-    Rcpp::traits::input_parameter< SEXP >::type Z_(Z_SEXP);
-    Rcpp::traits::input_parameter< VectorXf >::type tot_Eta_prec(tot_Eta_precSEXP);
+    Rcpp::traits::input_parameter< MatrixXd >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< MSpMatd >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< VectorXd >::type tot_Eta_prec(tot_Eta_precSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type chol_ZtZ_Kinv_list_(chol_ZtZ_Kinv_list_SEXP);
-    Rcpp::traits::input_parameter< MatrixXf >::type h2s(h2sSEXP);
+    Rcpp::traits::input_parameter< MatrixXd >::type h2s(h2sSEXP);
     Rcpp::traits::input_parameter< VectorXi >::type h2s_index(h2s_indexSEXP);
-    rcpp_result_gen = Rcpp::wrap(sample_MME_ZKZts_c(Y, Z_, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index));
+    rcpp_result_gen = Rcpp::wrap(sample_MME_ZKZts_c(Y, Z, tot_Eta_prec, chol_ZtZ_Kinv_list_, h2s, h2s_index));
     return rcpp_result_gen;
 END_RCPP
 }

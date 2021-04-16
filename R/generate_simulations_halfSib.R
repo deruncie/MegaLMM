@@ -11,6 +11,7 @@ family_simulation = function(name = 'simulation_1', family_sizes,within_group_co
   nTot = sum(family_sizes)
   Sire = as.factor(do.call(c,lapply(1:length(family_sizes),function(x) rep(x,family_sizes[x]))))
   K = within_group_cor*tcrossprod(Matrix(model.matrix(~0+Sire))) + diag(1-within_group_cor,length(Sire))
+  # K = tcrossprod(matrix(rnorm(nTot^2,nTot))/nTot/2)+diag(1,nTot)
   rownames(K) = 1:nrow(K)
 
   # for more informative K
@@ -114,7 +115,8 @@ new_halfSib_simulation = function(name, nSire,nRep,p, b, factor_h2s, Va = 0.2, V
   nTot = mean(nRep) * nSire
   nRep = rep(nRep,nSire/length(nRep))
   Sire = as.factor(do.call(c,lapply(1:nSire,function(x) rep(x,nRep[x]))))
-  K = .25*tcrossprod(Matrix(model.matrix(~0+Sire))) + diag(.75,length(Sire))
+  # K = .25*tcrossprod(Matrix(model.matrix(~0+Sire))) + diag(.75,length(Sire))
+  K = tcrossprod(matrix(rnorm(nTot^2,nTot))/nTot/2)+diag(1,nTot)
   rownames(K) = 1:nrow(K)
 
   # for more informative K
