@@ -1,8 +1,82 @@
-// #include <math.h>
-// #include <iostream>
-// #include "MegaLMM_types.h"
-// 
-// using namespace Eigen;
+#include <math.h>
+#include <iostream>
+#include "MegaLMM_types.h"
+
+using namespace Eigen;
+
+// [[Rcpp::export()]] 
+MatrixXf matrix_f_multiply_toDense(SEXP X_, SEXP Y_){
+  if(Rf_isNull(X_)) return(as<MatrixXf >(Y_));
+  if(Rf_isMatrix(X_)) {
+    MatrixXf X = as<MatrixXf >(X_);
+    if(Rf_isMatrix(Y_)) {
+      MatrixXf Y = as<MatrixXf >(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      return(X*Y);
+    } else{
+      SpMat Y = as<SpMat>(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      return(X*Y);
+    }
+  }
+  else {
+    SpMat X = as<SpMat>(X_);
+    if(Rf_isMatrix(Y_)) {
+      MatrixXf Y = as<MatrixXf >(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      setNbThreads(0);
+      if(Eigen::nbThreads( ) > 1) {
+        SparseMatrix<float,RowMajor> Xr = X;  // Convert to RowMajor so it can be parallelized
+        return(Xr*Y);
+      } else{
+        return(X*Y);
+      }
+    } else{
+      SpMat Y = as<SpMat>(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      return(X*Y);
+    }
+  }
+}
+
+
+// [[Rcpp::export()]] 
+MatrixXd matrix_d_multiply_toDense(SEXP X_, SEXP Y_){
+  if(Rf_isNull(X_)) return(as<Map<MatrixXd> >(Y_));
+  if(Rf_isMatrix(X_)) {
+    Map<MatrixXd> X = as<Map<MatrixXd> >(X_);
+    if(Rf_isMatrix(Y_)) {
+      Map<MatrixXd> Y = as<Map<MatrixXd> >(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      return(X*Y);
+    } else{
+      MSpMatd Y = as<MSpMatd>(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      return(X*Y);
+    }
+  }
+  else {
+    MSpMatd X = as<MSpMatd>(X_);
+    if(Rf_isMatrix(Y_)) {
+      Map<MatrixXd> Y = as<Map<MatrixXd> >(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      setNbThreads(0);
+      if(Eigen::nbThreads( ) > 1) {
+        SparseMatrix<double,RowMajor> Xr = X;  // Convert to RowMajor so it can be parallelized
+        return(Xr*Y);
+      } else{
+        return(X*Y);
+      }
+    } else{
+      MSpMatd Y = as<MSpMatd>(Y_);
+      if(X.cols() != Y.rows()) stop("Wrong dimensions of matrices");
+      return(X*Y);
+    }
+  }
+}
+
+
+
 // MatrixXf rstdnorm_mat2(int n,int p) {  // returns nxp matrix
 //   VectorXd X_vec(n*p);
 //   for(int i = 0; i < n*p; i++){
