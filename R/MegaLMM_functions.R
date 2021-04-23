@@ -142,6 +142,19 @@ get_meff = function(MegaLMM_state){
   meff
 }
 
+get_factor_variance = function(MegaLMM_state) {
+  vars = with(MegaLMM_state$current_state, {
+    apply(F,2,var)*rowMeans(Lambda^2)
+  })
+  vars
+}
+
+# change_K = function(MegaLMM_state,
+#                     increment = 0.05*MegaLMM_state$run_variables$Kr,
+#                     max_K = min(MegaLMM_state$run_variables$n/4,MegaLMM_state$run_variables$p),
+#                     stat = NULL,
+#                     threshold = 0.01)
+
 #' Re-orders factors in decreasing order of magnitude
 #' 
 #' Re-orders factors in decreasing order of magnitude
