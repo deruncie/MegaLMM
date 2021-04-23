@@ -188,6 +188,8 @@ MegaLMM_priors = function(
 #' @param run_parameters See \link{MegaLMM_control}
 #' @param posteriorSample_params A character vector giving names of parameters to save all posterior samples
 #' @param posteriorMean_params A character vector giving names of parameters to save only the posterior mean.
+#' @param posteriorFunctions A list of named and quoted functions that that will calculate statistics based on the current_state. 
+#'      The functions can use variables in \code{current_state}, \code{data_matrices}, \code{priors}, or in the user's environment.
 #' @param run_ID A unique identifier for this model. The code will create a folder with this name to hold all
 #'     posterior samples and diagnostic information during the run.
 #'
@@ -206,6 +208,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
                             posteriorSample_params = c('Lambda','U_F','F','delta','tot_F_prec','F_h2','tot_Eta_prec',
                                                        'resid_h2', 'B1', 'B2_F','B2_R','U_R','cis_effects','Lambda_m_eff'),
                             posteriorMean_params = c(),
+                            posteriorFunctions = list(),
                             run_ID = 'MegaLMM_run'){
   # creates model matrices, RE_setup, current_state
   # returns MegaLMM_state
@@ -509,6 +512,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   MegaLMM_state$Posterior = list(
     posteriorSample_params = posteriorSample_params,
     posteriorMean_params = posteriorMean_params,
+    posteriorFunctions = posteriorFunctions,
     total_samples = 0,
     folder = sprintf('%s/Posterior',run_ID),
     files = c()

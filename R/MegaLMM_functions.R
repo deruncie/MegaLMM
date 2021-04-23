@@ -292,6 +292,39 @@ rescale_factors_F = function(MegaLMM_state){
   return(MegaLMM_state)
 }
 
+calc_functions = function(MegaLMM_state,functions) {
+  # recover()
+  terms = unique(unlist(lapply(functions,function(FUN) {
+    # FUN = match.call()[[3]]
+    if(is(FUN,'character')){
+      FUN = parse(text=FUN)
+    }
+    terms = all.vars(FUN)
+    terms
+  })))
+  extra_terms = terms[terms %in% with(MegaLMM_state,c(names(current_state),names(data_matrices),names(priors))) == F]
+  extra_env = list()
+  for(term in extra_terms){
+    if(term %in% ls(parent.frame(2))) {
+      extra_env[[term]] = parent.frame(2)[[term]]
+    } else if(term %in% ls(parent.frame(3))) {
+      extra_env[[term]] = parent.frame(3)[[term]]
+    }
+  }
+  base_env = with(MegaLMM_state,c(data_matrices,priors,current_state))
+  base_env = c(base_env,extra_env)
+  env = c(MegaLMM_state$current_state,base_env)
+  if(!all(terms %in% names(env))) stop(sprintf('Terms %s not found',paste(terms[terms %in% names(env) == F],collapse=', ')))
+  result = lapply(functions,function(FUN) {
+    if(is(FUN,'character')){
+      FUN = parse(text=FUN)
+    }
+    result = as.matrix(eval(FUN,envir = env))
+  })
+  names(result) = names(functions)
+  result
+}
+  
 #' Saves current state in Posterior
 #'
 #' Saves current state in Posterior
@@ -342,11 +375,29 @@ save_posterior_sample = function(MegaLMM_state) {
   for(param in Posterior$posteriorMean_params){
     Posterior[[param]] = (Posterior[[param]]*(total_samples - 1) + current_state[[param]])/total_samples
   }
+  
+  if(!is.null(Posterior$posteriorFunctions)) {
+    MegaLMM_state$current_state = current_state
+    function_results = calc_functions(MegaLMM_state,Posterior$posteriorFunctions)
+    for(param in names(function_results)) {
+      # parameters shouldn't change dimension here
+      record_sample_Posterior_array(function_results[[param]],Posterior[[param]],sp_num)
+    }
+  }
 
   return(Posterior)
 }
 
 reset_Posterior = function(Posterior,MegaLMM_state){
+  Posterior = list(
+    posteriorSample_params = Posterior$posteriorSample_params,
+    posteriorMean_params = Posterior$posteriorMean_params,
+    posteriorFunctions = Posterior$posteriorFunctions,
+    total_samples = 0,
+    folder = sprintf('%s/Posterior',MegaLMM_state$run_ID),
+    files = c()
+  )
+  
   current_state = MegaLMM_state$current_state
 
   # re-transform random effects using RE_L
@@ -375,12 +426,19 @@ reset_Posterior = function(Posterior,MegaLMM_state){
       Posterior[[param]] = NULL
     }
   }
+  if(!is.null(Posterior$posteriorFunctions)) {
+    function_results = calc_functions(MegaLMM_state,Posterior$posteriorFunctions)
+    for(param in names(function_results)) {
+      Posterior[[param]] = array(0,dim = c(0,dim(function_results[[param]])))
+      dimnames(Posterior[[param]])[2:3] = dimnames(function_results[[param]])
+    }
+  }
   Posterior$sp_num = 0
   Posterior
 }
 
 expand_Posterior = function(Posterior,size){
-  for(param in Posterior$posteriorSample_params){
+  for(param in c(Posterior$posteriorSample_params,names(Posterior$posteriorFunctions))){
     Posterior[[param]] = abind(Posterior[[param]],array(NA,dim = c(size,dim(Posterior[[param]])[2:3])),along = 1)
   }
   Posterior
