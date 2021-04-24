@@ -224,16 +224,18 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
     MegaLMM_state$current_state = MegaLMM_state$priors$B2_prior$sampler(MegaLMM_state,1)
   }
 
-  # reorder Posterior
-  Posterior = MegaLMM_state$Posterior
-
-  for(param in reorder_params){
-    if(! param %in% names(Posterior)) next
-    if(dim(Posterior[[param]])[1] == 0) next
-    Posterior[[param]] = Posterior[[param]][,,factor_order,drop=FALSE]
-  }
-
-  MegaLMM_state$Posterior = Posterior
+  # # reorder Posterior
+  # Posterior = MegaLMM_state$Posterior
+  # 
+  # for(param in reorder_params){
+  #   if(! param %in% names(Posterior)) next
+  #   if(dim(Posterior[[param]])[1] == 0) next
+  #   Posterior[[param]] = Posterior[[param]][,,factor_order,drop=FALSE]
+  # }
+  # 
+  # MegaLMM_state$Posterior = Posterior
+  # just clear the Posterior
+  MegaLMM_state = clear_Posterior(MegaLMM_state)
 
   return(MegaLMM_state)
 }
