@@ -296,6 +296,7 @@ rescale_factors_F = function(MegaLMM_state){
 
 calc_functions = function(MegaLMM_state,functions) {
   # recover()
+  MegaLMM_state$current_state = remove_nuisance_parameters(MegaLMM_state)
   terms = unique(unlist(lapply(functions,function(FUN) {
     # FUN = match.call()[[3]]
     if(is(FUN,'character')){
@@ -316,17 +317,42 @@ calc_functions = function(MegaLMM_state,functions) {
   base_env = with(MegaLMM_state,c(data_matrices,priors,current_state))
   base_env = c(base_env,extra_env)
   env = c(MegaLMM_state$current_state,base_env)
-  if(!all(terms %in% names(env))) stop(sprintf('Terms %s not found',paste(terms[terms %in% names(env) == F],collapse=', ')))
+  # if(!all(terms %in% names(env))) stop(sprintf('Terms %s not found',paste(terms[terms %in% names(env) == F],collapse=', ')))
   result = lapply(functions,function(FUN) {
     if(is(FUN,'character')){
       FUN = parse(text=FUN)
     }
-    result = as.matrix(eval(FUN,envir = env))
+    result = try(eval(FUN,envir = env))
+    result = as.matrix(result)
   })
   names(result) = names(functions)
   result
 }
   
+remove_nuisance_parameters = function(MegaLMM_state) {
+  current_state = within(MegaLMM_state$current_state,{
+    # re-transform random effects using RE_L (RE_L %*% diag(D) %*% t(RE_L) = bdiag(K_mats))
+    U_R = MegaLMM_state$data_matrices$RE_L %**% U_R
+    U_F = MegaLMM_state$data_matrices$RE_L %**% U_F
+    # transform variables so that the variance of each column of F is 1.
+    F_var = 1/tot_F_prec
+    U_F[] = sweep(U_F,2,sqrt(F_var),'/')
+    B2_F[] = sweep(B2_F,2,sqrt(F_var),'/')
+    F[] = sweep(F,2,sqrt(F_var),'/')
+    Lambda[] = sweep(Lambda,1,sqrt(F_var),'*')
+    
+    # re-scale by var_Eta
+    if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
+    U_R[] = sweep(U_R,2,sqrt(var_Eta),'*')
+    B1[] = sweep(B1,2,sqrt(var_Eta),'*')
+    B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
+    Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
+    Eta[] = sweep(Eta,2,sqrt(var_Eta),'*')
+    tot_Eta_prec[] = tot_Eta_prec / var_Eta
+  })
+  return(current_state)
+}
+
 #' Saves current state in Posterior
 #'
 #' Saves current state in Posterior
@@ -338,7 +364,7 @@ save_posterior_sample = function(MegaLMM_state) {
   # Posterior arrays are expanded / contracted as the number of factors changes (with update_k)
   # values are re-scaled by var_Eta so that they are on the scale of the original data
 
-  current_state = MegaLMM_state$current_state
+  current_state = remove_nuisance_parameters(MegaLMM_state)
   Posterior = MegaLMM_state$Posterior
 
   total_samples = Posterior$total_samples + 1
@@ -346,26 +372,26 @@ save_posterior_sample = function(MegaLMM_state) {
   Posterior$total_samples = total_samples
   Posterior$sp_num = sp_num
 
-  current_state = within(current_state,{
-    # re-transform random effects using RE_L (RE_L %*% diag(D) %*% t(RE_L) = bdiag(K_mats))
-    U_R = MegaLMM_state$data_matrices$RE_L %**% U_R
-    U_F = MegaLMM_state$data_matrices$RE_L %**% U_F
-    # transform variables so that the variance of each column of F is 1.
-    F_var = 1/tot_F_prec
-    U_F[] = sweep(U_F,2,sqrt(F_var),'/')
-    B2_F[] = sweep(B2_F,2,sqrt(F_var),'/')
-    F[] = sweep(F,2,sqrt(F_var),'/')
-    Lambda[] = sweep(Lambda,1,sqrt(F_var),'*')
-
-    # re-scale by var_Eta
-    if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
-    U_R[] = sweep(U_R,2,sqrt(var_Eta),'*')
-    B1[] = sweep(B1,2,sqrt(var_Eta),'*')
-    B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
-    Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
-    Eta[] = sweep(Eta,2,sqrt(var_Eta),'*')
-    tot_Eta_prec[] = tot_Eta_prec / var_Eta
-  })
+  # current_state = within(current_state,{
+  #   # re-transform random effects using RE_L (RE_L %*% diag(D) %*% t(RE_L) = bdiag(K_mats))
+  #   U_R = MegaLMM_state$data_matrices$RE_L %**% U_R
+  #   U_F = MegaLMM_state$data_matrices$RE_L %**% U_F
+  #   # transform variables so that the variance of each column of F is 1.
+  #   F_var = 1/tot_F_prec
+  #   U_F[] = sweep(U_F,2,sqrt(F_var),'/')
+  #   B2_F[] = sweep(B2_F,2,sqrt(F_var),'/')
+  #   F[] = sweep(F,2,sqrt(F_var),'/')
+  #   Lambda[] = sweep(Lambda,1,sqrt(F_var),'*')
+  # 
+  #   # re-scale by var_Eta
+  #   if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
+  #   U_R[] = sweep(U_R,2,sqrt(var_Eta),'*')
+  #   B1[] = sweep(B1,2,sqrt(var_Eta),'*')
+  #   B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
+  #   Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
+  #   Eta[] = sweep(Eta,2,sqrt(var_Eta),'*')
+  #   tot_Eta_prec[] = tot_Eta_prec / var_Eta
+  # })
 
   sp = dim(Posterior$Lambda)[1]
 
@@ -379,7 +405,7 @@ save_posterior_sample = function(MegaLMM_state) {
   }
   
   if(!is.null(Posterior$posteriorFunctions)) {
-    MegaLMM_state$current_state = current_state
+    # MegaLMM_state$current_state = current_state
     function_results = calc_functions(MegaLMM_state,Posterior$posteriorFunctions)
     for(param in names(function_results)) {
       # parameters shouldn't change dimension here
@@ -395,16 +421,16 @@ reset_Posterior = function(Posterior,MegaLMM_state){
     posteriorSample_params = Posterior$posteriorSample_params,
     posteriorMean_params = Posterior$posteriorMean_params,
     posteriorFunctions = Posterior$posteriorFunctions,
-    total_samples = 0,
+    total_samples = Posterior$total_samples,
     folder = sprintf('%s/Posterior',MegaLMM_state$run_ID),
-    files = c()
+    files = Posterior$files
   )
   
-  current_state = MegaLMM_state$current_state
+  current_state = remove_nuisance_parameters(MegaLMM_state)
 
   # re-transform random effects using RE_L
-  current_state$U_F = MegaLMM_state$data_matrices$RE_L %*% current_state$U_F
-  current_state$U_R = MegaLMM_state$data_matrices$RE_L %*% current_state$U_R
+  # current_state$U_F = MegaLMM_state$data_matrices$RE_L %*% current_state$U_F
+  # current_state$U_R = MegaLMM_state$data_matrices$RE_L %*% current_state$U_R
 
   for(param in Posterior$posteriorSample_params){
     if(param %in% names(current_state) && length(dim(current_state[[param]])) == 2) {
@@ -483,7 +509,7 @@ save_posterior_chunk = function(MegaLMM_state){
   folder = Posterior$folder
   if(!dir.exists(folder)) dir.create(folder)
   file_suffix = sprintf('%d.rds',Posterior$total_samples)
-  res = sapply(c(Posterior$posteriorSample_params,Posterior$posteriorMean_params),function(param) {
+  res = sapply(c(Posterior$posteriorSample_params,Posterior$posteriorMean_params,names(Posterior$posteriorFunctions)),function(param) {
     file_name = sprintf('%s/%s_%s',folder,param,file_suffix)
     samples = Posterior[[param]]
     if(length(samples) > 0) {
@@ -675,7 +701,7 @@ get_posterior_FUN = function(MegaLMM_state,FUN,samples = NULL,mc.cores = 1) {
     FUN = parse(text=FUN)
   }
   terms = all.vars(FUN)
-  extra_terms = terms[terms %in% with(MegaLMM_state,c(names(current_state),names(data_matrices),names(priors),names(Posterior))) == F]
+  extra_terms = terms[terms %in% with(MegaLMM_state,c(names(data_matrices),names(priors),names(Posterior))) == F]
   extra_env = list()
   for(term in extra_terms){
     if(term %in% ls(parent.frame(2))) {
@@ -692,7 +718,7 @@ get_posterior_FUN = function(MegaLMM_state,FUN,samples = NULL,mc.cores = 1) {
     }
     samples = 1:dim(MegaLMM_state$Posterior[[term1]])[1]
   }
-  base_env = with(MegaLMM_state,c(data_matrices,priors,Posterior[MegaLMM_state$Posterior$posteriorMean_params],current_state))
+  base_env = with(MegaLMM_state,c(data_matrices,priors,Posterior[MegaLMM_state$Posterior$posteriorMean_params]))
   base_env = c(base_env,extra_env)
   Posterior = MegaLMM_state$Posterior
   per_sample_fun = function(sample_index_i) {
