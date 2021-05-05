@@ -202,6 +202,7 @@ Look for the output in the `MegaLMM_example` (our `run_ID`) directory.
 ```{r}
 # reload the whole database of posterior samples
 MegaLMM_state$Posterior = reload_Posterior(MegaLMM_state)
+U_hat = get_posterior_mean(MegaLMM_state,U_R + U_F %*% Lambda)
 
 # all parameter names in Posterior
 MegaLMM_state$Posterior$posteriorSample_params

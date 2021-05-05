@@ -115,6 +115,8 @@ new_halfSib_simulation = function(name, nSire,nRep,p, b, factor_h2s, Va = 0.2, V
   nRep = rep(nRep,nSire/length(nRep))
   Sire = as.factor(do.call(c,lapply(1:nSire,function(x) rep(x,nRep[x]))))
   K = .25*tcrossprod(Matrix(model.matrix(~0+Sire))) + diag(.75,length(Sire))
+  # K = tcrossprod(rstdnorm_mat(nrow(K),nrow(K))) + diag(1,nrow(K))
+  # K = K/mean(diag(K))
   rownames(K) = 1:nrow(K)
 
   # for more informative K
