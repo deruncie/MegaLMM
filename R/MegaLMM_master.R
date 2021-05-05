@@ -789,24 +789,26 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
   # cholesky decompositions (RtR) of each K_inverse matrix
   chol_Ki_mats = lapply(RE_setup,function(re) as(chol(as.matrix(re$K_inv)),'dgCMatrix'))
+  # The following would only work if there were no missing data
   if(length(chol_Ki_mats) == 1 && diagonalize_ZtZ_Kinv) {
+    print('diagonalize_ZtZ_Kinv not currently implemented')
     # print("Diagonalizing ZtZ and Kinv")
-    S = simultaneous_diagonalize(crossprod(ZL),solve(chol_Ki_mats[[1]]))$S
-    ZL = ZL %*% S
-    RE_L  = MegaLMM_state$data_matrices$RE_L %*% S
-    if(nnzero(ZL)/length(ZL) > 0.5) {
-      ZL = as.matrix(ZL)
-    } else{
-      ZL = as(ZL,'dgCMatrix')
-    }
-    if(nnzero(RE_L)/length(RE_L) > 0.5) {
-      RE_L = as.matrix(RE_L)
-    } else{
-      RE_L = as(RE_L,'dgCMatrix')
-    }
-    MegaLMM_state$data_matrices$ZL = ZL
-    MegaLMM_state$data_matrices$RE_L = RE_L
-    chol_Ki_mats[[1]] = as(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
+    # S = simultaneous_diagonalize(crossprod(ZL),solve(chol_Ki_mats[[1]]))$S
+    # ZL = ZL %*% S
+    # RE_L  = MegaLMM_state$data_matrices$RE_L %*% S
+    # if(nnzero(ZL)/length(ZL) > 0.5) {
+    #   ZL = as.matrix(ZL)
+    # } else{
+    #   ZL = as(ZL,'dgCMatrix')
+    # }
+    # if(nnzero(RE_L)/length(RE_L) > 0.5) {
+    #   RE_L = as.matrix(RE_L)
+    # } else{
+    #   RE_L = as(RE_L,'dgCMatrix')
+    # }
+    # MegaLMM_state$data_matrices$ZL = ZL
+    # MegaLMM_state$data_matrices$RE_L = RE_L
+    # chol_Ki_mats[[1]] = as(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
   }
 
 
