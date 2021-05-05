@@ -736,11 +736,13 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
 #'     from a previous MegaLMM_state object if the data and model is identical.
 #' @param chol_R_list See \code{Qt_list}
 #' @param chol_ZKZt_list See \code{Qt_list}
+#' @param diagonalize_ZtZ_Kinv Should a matrix S be calculated to simultaneously diagonalize ZtZ and Kinv? 
+#'     This only works with a single random effect, and may slow down the computation some, but with large sample size can dramatically reduce the memory footprint.
 #'
 #' @return MegaLMM_state object with \code{Qt_list}, \code{chol_R_list} and \code{chol_ZKZt_list} added to run_variables
 #' @export
 #'
-initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL) {
+initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL,diagonalize_ZtZ_Kinv = FALSE) {
   # calculates Qt_list, chol_R_list and chol_ZKZt_list
   # returns MegaLMM_state
 
@@ -787,6 +789,25 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
   # cholesky decompositions (RtR) of each K_inverse matrix
   chol_Ki_mats = lapply(RE_setup,function(re) as(chol(as.matrix(re$K_inv)),'dgCMatrix'))
+  if(length(chol_Ki_mats) == 1 && diagonalize_ZtZ_Kinv) {
+    # print("Diagonalizing ZtZ and Kinv")
+    S = simultaneous_diagonalize(crossprod(ZL),solve(chol_Ki_mats[[1]]))$S
+    ZL = ZL %*% S
+    RE_L  = MegaLMM_state$data_matrices$RE_L %*% S
+    if(nnzero(ZL)/length(ZL) > 0.5) {
+      ZL = as.matrix(ZL)
+    } else{
+      ZL = as(ZL,'dgCMatrix')
+    }
+    if(nnzero(RE_L)/length(RE_L) > 0.5) {
+      RE_L = as.matrix(RE_L)
+    } else{
+      RE_L = as(RE_L,'dgCMatrix')
+    }
+    MegaLMM_state$data_matrices$ZL = ZL
+    MegaLMM_state$data_matrices$RE_L = RE_L
+    chol_Ki_mats[[1]] = as(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
+  }
 
 
   Qt_list = list()
@@ -854,8 +875,6 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
     }
 
-    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
-
     chol_V_list_list[[set]] = make_chol_V_list(ZKZts_set,h2s_matrix,run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
     # convert any to dense if possible
     for(i in 1:length(chol_V_list_list[[set]])){
@@ -864,6 +883,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
         chol_V_list_list[[set]][[i]] = as.matrix(chol_V_list_list[[set]][[i]])
       }
     }
+    
+    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
     chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
   }
   if(verbose) close(pb)
