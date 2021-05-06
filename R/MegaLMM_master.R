@@ -49,6 +49,7 @@ MegaLMM_control = function(
                         svd_K = TRUE,
                         verbose = TRUE,
                         save_current_state = TRUE,
+                        diagonalize_ZtZ_Kinv = TRUE,
                         ...
                         ) {
 
@@ -394,6 +395,40 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
       }
     })
   }
+  
+  # diagonalize RE_setup[[1]]. If this is the only one, will have RAM advantages. Otherwise, probably neutral.
+  # maybe only do if only 1 RE?
+  if(length(RE_setup) == 1 && run_parameters$diagonalize_ZtZ_Kinv) {
+    RE_setup[[1]] = within(RE_setup[[1]],{
+      S = simultaneous_diagonalize(crossprod(ZL),solve(chol(forceSymmetric(K_inv))))$S
+      ZL = ZL %*% S
+      L = L %*% S
+      K = K_inv = as(diag(1,nrow(K)),'dgCMatrix')
+    })
+  }
+  # # diagonalize RE_setup[[1]]
+  # if(length(chol_Ki_mats) == 1 && diagonalize_ZtZ_Kinv) {
+  #   # print('diagonalize_ZtZ_Kinv not currently implemented')
+  #   print("Diagonalizing ZtZ and Kinv")
+  #   S = simultaneous_diagonalize(crossprod(ZL),solve(chol_Ki_mats[[1]]))$S
+  #   ZL = ZL %*% S
+  #   RE_L  = MegaLMM_state$data_matrices$RE_L %*% S
+  #   if(nnzero(ZL)/length(ZL) > 0.5) {
+  #     ZL = as.matrix(ZL)
+  #   } else{
+  #     ZL = as(ZL,'dgCMatrix')
+  #   }
+  #   if(nnzero(RE_L)/length(RE_L) > 0.5) {
+  #     RE_L = as.matrix(RE_L)
+  #   } else{
+  #     RE_L = as(RE_L,'dgCMatrix')
+  #   }
+  #   MegaLMM_state$data_matrices$ZL = ZL
+  #   MegaLMM_state$data_matrices$RE_L = RE_L
+  #   chol_Ki_mats[[1]] = as(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
+  # }
+  
+  
   ZL = do.call(cbind,lapply(RE_setup,function(re) re$ZL))
   if(nnzero(ZL)/length(ZL) < .25) {
     ZL = as(ZL,'dgCMatrix')
@@ -742,12 +777,13 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
 #' @return MegaLMM_state object with \code{Qt_list}, \code{chol_R_list} and \code{chol_ZKZt_list} added to run_variables
 #' @export
 #'
-initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL,diagonalize_ZtZ_Kinv = FALSE) {
+initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL) {
   # calculates Qt_list, chol_R_list and chol_ZKZt_list
   # returns MegaLMM_state
 
   run_parameters = MegaLMM_state$run_parameters
   data_matrices = MegaLMM_state$data_matrices
+  priors = MegaLMM_state$priors
   Y_missing = run_parameters$observation_model_parameters$observation_setup$Y_missing
   h2s_matrix = MegaLMM_state$data_matrices$h2s_matrix
   verbose = run_parameters$verbose
@@ -789,28 +825,6 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
   # cholesky decompositions (RtR) of each K_inverse matrix
   chol_Ki_mats = lapply(RE_setup,function(re) as(chol(as.matrix(re$K_inv)),'dgCMatrix'))
-  # The following would only work if there were no missing data
-  if(length(chol_Ki_mats) == 1 && diagonalize_ZtZ_Kinv) {
-    print('diagonalize_ZtZ_Kinv not currently implemented')
-    # print("Diagonalizing ZtZ and Kinv")
-    # S = simultaneous_diagonalize(crossprod(ZL),solve(chol_Ki_mats[[1]]))$S
-    # ZL = ZL %*% S
-    # RE_L  = MegaLMM_state$data_matrices$RE_L %*% S
-    # if(nnzero(ZL)/length(ZL) > 0.5) {
-    #   ZL = as.matrix(ZL)
-    # } else{
-    #   ZL = as(ZL,'dgCMatrix')
-    # }
-    # if(nnzero(RE_L)/length(RE_L) > 0.5) {
-    #   RE_L = as.matrix(RE_L)
-    # } else{
-    #   RE_L = as(RE_L,'dgCMatrix')
-    # }
-    # MegaLMM_state$data_matrices$ZL = ZL
-    # MegaLMM_state$data_matrices$RE_L = RE_L
-    # chol_Ki_mats[[1]] = as(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
-  }
-
 
   Qt_list = list()
   # QtZL_list = list()
@@ -886,8 +900,15 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
     }
     
-    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
-    chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
+    if(set == 1 || sum(priors$h2_priors_resids[-1]) > 0) {
+      # Note: set >1 only applies to the resids (factors always use set==1).
+      ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
+      chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,
+                                                               run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
+    } else{
+      # if the prior is concentrated at h2s==0, then we don't need to sample U. All values will be 0.
+      chol_ZtZ_Kinv_list_list[[set]] = lapply(seq_along(priors$h2_priors_resids),function(x) matrix(1,0,0))
+    }
   }
   if(verbose) close(pb)
 
