@@ -214,7 +214,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   # creates model matrices, RE_setup, current_state
   # returns MegaLMM_state
 
-  try(dir.create(run_ID),silent=T)
+  try(dir.create(run_ID,recursive = T),silent=T)
 
   # ----------------------------- #
   # -------- observation model ---------- #
