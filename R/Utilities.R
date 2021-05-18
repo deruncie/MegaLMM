@@ -300,8 +300,8 @@ set_Missing_data_map = function(MegaLMM_state,Missing_data_map) {
   })
   non_missing_cols = unname(which(colSums(!Y_missing_mat)>0))
   unique_Y_row_obs = unique(c(list(non_missing_cols),Y_row_obs))
-  unique_Y_row_obs_str = lapply(unique_Y_row_obs,paste,collapse='')
-  Y_row_obs_index = sapply(Y_row_obs,function(x) which(unique_Y_row_obs_str == paste(x,collapse='')))
+  unique_Y_row_obs_str = lapply(unique_Y_row_obs,paste,collapse=',')
+  Y_row_obs_index = sapply(Y_row_obs,function(x) which(unique_Y_row_obs_str == paste(x,collapse=',')))
 
   Missing_row_data_map = lapply(seq_along(unique_Y_row_obs),function(i) {
     x = unique_Y_row_obs[[i]]
