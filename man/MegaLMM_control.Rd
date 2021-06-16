@@ -4,10 +4,22 @@
 \alias{MegaLMM_control}
 \title{Set MegaLMM run parameters}
 \usage{
-MegaLMM_control(scale_Y = c(T, F), K = 20, h2_divisions = 100,
-  h2_step_size = NULL, drop0_tol = 1e-14, K_eigen_tol = 1e-10,
-  burn = 100, thin = 2, max_NA_groups = Inf, svd_K = TRUE,
-  verbose = TRUE, save_current_state = TRUE, ...)
+MegaLMM_control(
+  scale_Y = c(T, F),
+  K = 20,
+  h2_divisions = 100,
+  h2_step_size = NULL,
+  drop0_tol = 1e-14,
+  K_eigen_tol = 1e-10,
+  burn = 100,
+  thin = 2,
+  max_NA_groups = Inf,
+  svd_K = TRUE,
+  verbose = TRUE,
+  save_current_state = TRUE,
+  diagonalize_ZtZ_Kinv = TRUE,
+  ...
+)
 }
 \arguments{
 \item{scale_Y}{Should the Y values be centered and scaled? Recommend, except for simulated data.}

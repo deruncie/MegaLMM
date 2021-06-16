@@ -4,8 +4,13 @@
 \alias{initialize_MegaLMM}
 \title{Initialized Gibbs sampler for MegaLMM model}
 \usage{
-initialize_MegaLMM(MegaLMM_state, ncores = my_detectCores(),
-  Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL)
+initialize_MegaLMM(
+  MegaLMM_state,
+  ncores = my_detectCores(),
+  Qt_list = NULL,
+  chol_R_list = NULL,
+  chol_ZKZt_list = NULL
+)
 }
 \arguments{
 \item{MegaLMM_state}{MegaLMM_state object as returned by \link{setup_model_MegaLMM}}
@@ -19,6 +24,9 @@ from a previous MegaLMM_state object if the data and model is identical.}
 \item{chol_R_list}{See \code{Qt_list}}
 
 \item{chol_ZKZt_list}{See \code{Qt_list}}
+
+\item{diagonalize_ZtZ_Kinv}{Should a matrix S be calculated to simultaneously diagonalize ZtZ and Kinv? 
+This only works with a single random effect, and may slow down the computation some, but with large sample size can dramatically reduce the memory footprint.}
 }
 \value{
 MegaLMM_state object with \code{Qt_list}, \code{chol_R_list} and \code{chol_ZKZt_list} added to run_variables

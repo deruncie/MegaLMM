@@ -4,8 +4,7 @@
 \alias{reorder_factors}
 \title{Re-orders factors in decreasing order of magnitude}
 \usage{
-reorder_factors(MegaLMM_state, factor_order = NULL,
-  drop_cor_threshold = 0.6)
+reorder_factors(MegaLMM_state, factor_order = NULL, drop_cor_threshold = 0.6)
 }
 \arguments{
 \item{MegaLMM_state}{output of \code{\link{sample_MegaLMM}}}

@@ -4,8 +4,7 @@
 \alias{sample_MegaLMM}
 \title{Run MegaLMM Gibbs sampler}
 \usage{
-sample_MegaLMM(MegaLMM_state, n_iter, grainSize = 1, verbose = TRUE,
-  ...)
+sample_MegaLMM(MegaLMM_state, n_iter, grainSize = 1, verbose = TRUE, ...)
 }
 \arguments{
 \item{MegaLMM_state}{MegaLMM_state object of current chain}

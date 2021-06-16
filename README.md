@@ -46,7 +46,7 @@ where `F` is a `n x k` matrix of latent factor traits and `Lambda` is a `k x t` 
 
 ![Model outline](misc/Conceptual_model_v4.png)
 
-**Figure 1** from Runcie et al 2020.
+**Figure 1** from Runcie et al 2021.
 
 The unique aspects of **MegaLMM** relative to other factor models are:
 

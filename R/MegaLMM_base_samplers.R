@@ -1,9 +1,3 @@
-# Copyright 2020 Daniel Runcie
-# Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
-# that can be found in the LICENSE file and available at
-# https://polyformproject.org/licenses/noncommercial/1.0.0/
-
-
 #' Run MegaLMM Gibbs sampler
 #'
 #' Run MCMC chain for a specified number of iterations

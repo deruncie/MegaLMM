@@ -1,9 +1,3 @@
-# Copyright 2020 Daniel Runcie
-# Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
-# that can be found in the LICENSE file and available at
-# https://polyformproject.org/licenses/noncommercial/1.0.0/
-
-
 #' Set MegaLMM run parameters
 #'
 #' Function to create run_parameters list for initializing MegaLMM model
@@ -39,6 +33,7 @@
 #' @param verbose should progress during initiation and sampling be printed?
 #' @param save_current_state should the current state of the sampler be saved every time the function \code{sample_MegaLMM} is called?
 #' @seealso \code{\link{MegaLMM_init}}, \code{\link{sample_MegaLMM}}, \code{\link{print.MegaLMM_state}}
+#' @export
 #'
 MegaLMM_control = function(
                         scale_Y = c(T,F),

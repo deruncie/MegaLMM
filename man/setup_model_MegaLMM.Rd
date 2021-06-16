@@ -4,13 +4,22 @@
 \alias{setup_model_MegaLMM}
 \title{Set up a MegaLMM model}
 \usage{
-setup_model_MegaLMM(Y, formula, extra_regressions = NULL, data,
-  relmat = NULL, cis_genotypes = NULL, Lambda_fixed = NULL,
+setup_model_MegaLMM(
+  Y,
+  formula,
+  extra_regressions = NULL,
+  data,
+  relmat = NULL,
+  cis_genotypes = NULL,
+  Lambda_fixed = NULL,
   run_parameters = MegaLMM_control(),
-  posteriorSample_params = c("Lambda", "U_F", "F", "delta", "tot_F_prec",
-  "F_h2", "tot_Eta_prec", "resid_h2", "B1", "B2_F", "B2_R", "U_R",
-  "cis_effects", "Lambda_m_eff"), posteriorMean_params = c(),
-  run_ID = "MegaLMM_run")
+  posteriorSample_params = c("Lambda", "U_F", "F", "delta", "tot_F_prec", "F_h2",
+    "tot_Eta_prec", "resid_h2", "B1", "B2_F", "B2_R", "U_R", "cis_effects",
+    "Lambda_m_eff"),
+  posteriorMean_params = c(),
+  posteriorFunctions = list(),
+  run_ID = "MegaLMM_run"
+)
 }
 \arguments{
 \item{Y}{either a) a n x p matrix of data (n individuals x p traits), or b) a list describing
@@ -56,6 +65,9 @@ for any of the random effects, K is assumed to be the identity.}
 \item{posteriorSample_params}{A character vector giving names of parameters to save all posterior samples}
 
 \item{posteriorMean_params}{A character vector giving names of parameters to save only the posterior mean.}
+
+\item{posteriorFunctions}{A list of named and quoted functions that that will calculate statistics based on the current_state. 
+The functions can use variables in \code{current_state}, \code{data_matrices}, \code{priors}, or in the user's environment.}
 
 \item{run_ID}{A unique identifier for this model. The code will create a folder with this name to hold all
 posterior samples and diagnostic information during the run.}

@@ -1,9 +1,3 @@
-# Copyright 2020 Daniel Runcie
-# Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
-# that can be found in the LICENSE file and available at
-# https://polyformproject.org/licenses/noncommercial/1.0.0/
-
-
 sample_QTL_prec_ARD = function(MegaLMM_state,...){
   priors         = MegaLMM_state$priors
   run_variables  = MegaLMM_state$run_variables

@@ -1,9 +1,3 @@
-# Copyright 2020 Daniel Runcie
-# Use of this source code is governed by the PolyForm Noncommercial License 1.0.0
-# that can be found in the LICENSE file and available at
-# https://polyformproject.org/licenses/noncommercial/1.0.0/
-
-
 reinstall_MegaLMM = function(local_library = '~/R/x86_64-pc-linux-gnu-library/3.3/')
 {
   require(devtools)

@@ -4,9 +4,17 @@
 \alias{bs_diff}
 \title{B spline basis with option of centering and differencing coefficients}
 \usage{
-bs_diff(x, df = NULL, knots = NULL, degree = 3, intercept = TRUE,
-  Boundary.knots = range(x), differences = 1, periodic = FALSE,
-  center = TRUE)
+bs_diff(
+  x,
+  df = NULL,
+  knots = NULL,
+  degree = 3,
+  intercept = TRUE,
+  Boundary.knots = range(x),
+  differences = 1,
+  periodic = FALSE,
+  center = TRUE
+)
 }
 \value{
 list of data_model variables including: \itemize{

@@ -4,8 +4,7 @@
 \alias{plot.MegaLMM_state}
 \title{Make plots of current MegaLMM state}
 \usage{
-\method{plot}{MegaLMM_state}(MegaLMM_state,
-  file = "diagnostics_plots.pdf", setup = NULL)
+\method{plot}{MegaLMM_state}(MegaLMM_state, file = "diagnostics_plots.pdf", setup = NULL)
 }
 \arguments{
 \item{MegaLMM_state}{output of sample_MegaLMM}

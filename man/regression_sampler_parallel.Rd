@@ -4,20 +4,31 @@
 \alias{regression_sampler_parallel}
 \title{Draws samples from all ``fixed" coefficients (fixed and random) of a set of parallel linear regression models, conditional on the variance components.}
 \usage{
-regression_sampler_parallel(Y, W_base, W_list_, X, V_, h2s_index,
-  chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1,
-  prior_prec_alpha2, prior_mean_beta, prior_prec_beta)
+regression_sampler_parallel(
+  Y,
+  X1_base,
+  X1_list_,
+  X2,
+  Vx_,
+  h2s_index,
+  chol_V_list_,
+  Y_prec,
+  Y_prec_a0,
+  Y_prec_b0,
+  prior_prec_alpha1,
+  prior_prec_alpha2,
+  prior_mean_beta,
+  prior_prec_beta
+)
 }
 \arguments{
 \item{Y}{n x p matrix of observations}
 
-\item{W_base}{n x a1 matrix of W covariates common to all p. Can be NULL}
+\item{X1_base}{n x a1 matrix of X1 covariates common to all p. Can be NULL}
 
-\item{W_list_}{p-list of n x a2 matrices of W covariates unique to each p. Can be NULL}
+\item{X1_list_}{p-list of n x a2 matrices of X1 covariates unique to each p. Can be NULL}
 
-\item{X}{either X, a n x b matrix, or U, a n x m matrix. If U, then V must be non-NULL}
-
-\item{V_}{m x b matrix if X is U, otherwise NULL}
+\item{X2}{either X2, a n x b matrix, or Ux, a n x m matrix. If Ux, then V must be non-NULL}
 
 \item{h2s_index}{p-vector of indices for to select appropriate V of each trait}
 
@@ -34,6 +45,8 @@ regression_sampler_parallel(Y, W_base, W_list_, X, V_, h2s_index,
 \item{prior_mean_beta}{b x p matrix of prior means of beta}
 
 \item{prior_prec_beta}{b x p matrix of prior precisions of beta}
+
+\item{V_}{m x b matrix if X2 is Ux, otherwise NULL}
 }
 \value{
 List with elements: \itemize{
@@ -45,9 +58,9 @@ List with elements: \itemize{
 }
 \description{
 The model is either: \itemize{
-\item y_i = W_base*alpha1 + W_list_[i]*alpha2 + X*beta + e, e ~ N(0,1/Y_prec[i]*V)
-\item y_i = W_base*alpha1 + W_list_[i]*alpha2 + X*V_*beta + e, e ~ N(0,1/Y_prec[i]*V)
+\item y_i = X1_base*alpha1 + X1_list_[i]*alpha2 + X2*beta + e, e ~ N(0,1/Y_prec[i]*V)
+\item y_i = X1_base*alpha1 + X1_list_[i]*alpha2 + X2*V_*beta + e, e ~ N(0,1/Y_prec[i]*V)
 }
-where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
+Where \code{V = RtR}, priors on elements of alpha1, alpha2 and beta are independent.
 Each column of Y is considered independent
 }
