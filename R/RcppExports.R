@@ -135,3 +135,11 @@ get_fitted_set_c <- function(model_matrices, coefs) {
     .Call(`_MegaLMM_get_fitted_set_c`, model_matrices, coefs)
 }
 
+matrix_f_multiply_toDense <- function(X_, Y_) {
+    .Call(`_MegaLMM_matrix_f_multiply_toDense`, X_, Y_)
+}
+
+matrix_d_multiply_toDense <- function(X_, Y_) {
+    .Call(`_MegaLMM_matrix_d_multiply_toDense`, X_, Y_)
+}
+

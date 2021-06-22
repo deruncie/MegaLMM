@@ -35,7 +35,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
       rows = Missing_data_map[[set]]$Y_obs
       if(length(cols) == 0 || length(rows) == 0) next
 
-      Y_set = Qt_list[[set]] %**% Eta[rows,cols,drop=FALSE]
+      Y_set = Qt_list[[set]] %**% (Eta[rows,cols,drop=FALSE] - F[rows,fixed_factors,drop=FALSE] %*% Lambda[fixed_factors,cols,drop=FALSE])
       X_set = cbind(QtX2_R_list[[set]],Qt_list[[set]] %**% F[rows,!fixed_factors,drop=FALSE])
       if(length(Qt_cis_genotypes) == p) {
         Qt_cis_genotypes_set = Qt_cis_genotypes[cols]

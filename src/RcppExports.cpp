@@ -293,3 +293,27 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// matrix_f_multiply_toDense
+MatrixXf matrix_f_multiply_toDense(SEXP X_, SEXP Y_);
+RcppExport SEXP _MegaLMM_matrix_f_multiply_toDense(SEXP X_SEXP, SEXP Y_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_(X_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_(Y_SEXP);
+    rcpp_result_gen = Rcpp::wrap(matrix_f_multiply_toDense(X_, Y_));
+    return rcpp_result_gen;
+END_RCPP
+}
+// matrix_d_multiply_toDense
+MatrixXd matrix_d_multiply_toDense(SEXP X_, SEXP Y_);
+RcppExport SEXP _MegaLMM_matrix_d_multiply_toDense(SEXP X_SEXP, SEXP Y_SEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type X_(X_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Y_(Y_SEXP);
+    rcpp_result_gen = Rcpp::wrap(matrix_d_multiply_toDense(X_, Y_));
+    return rcpp_result_gen;
+END_RCPP
+}
