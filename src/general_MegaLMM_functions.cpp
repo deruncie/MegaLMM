@@ -1243,7 +1243,11 @@ MatrixXd sample_MME_ZKZts_c(
   for(std::size_t j = 0; j < p; j++){
     int h2_index = h2s_index[j] - 1;
     // ZtZ_Kinv needs to be scaled by tot_Eta_prec[j].
-    U.col(j) = sample_MME_single_diagR(Y.col(j), Z, chol_ZtZ_Kinv_list[h2_index], tot_Eta_prec[j], pes[j],randn_theta.col(j));
+    if(h2_e[h2_index] == 1.0) {
+      U.col(j) = VectorXd::Zero(r);
+    } else{
+      U.col(j) = sample_MME_single_diagR(Y.col(j), Z, chol_ZtZ_Kinv_list[h2_index], tot_Eta_prec[j], pes[j],randn_theta.col(j));
+    }
   }
   
   return(U);
