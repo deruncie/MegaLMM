@@ -306,10 +306,10 @@ save_posterior_sample = function(MegaLMM_state) {
     U_F = MegaLMM_state$data_matrices$RE_L %**% U_F
     # transform variables so that the variance of each column of F is 1.
     F_var = 1/tot_F_prec[!fixed_factors]
-    U_F[,!fixed_factors] = sweep(U_F[,!fixed_factors],2,sqrt(F_var),'/')
-    B2_F[,!fixed_factors] = sweep(B2_F[,!fixed_factors],2,sqrt(F_var),'/')
-    F[,!fixed_factors] = sweep(F[,!fixed_factors],2,sqrt(F_var),'/')
-    Lambda[!fixed_factors,] = sweep(Lambda[!fixed_factors,],1,sqrt(F_var),'*')
+    U_F[,!fixed_factors] = sweep(U_F[,!fixed_factors,drop=FALSE],2,sqrt(F_var),'/')
+    B2_F[,!fixed_factors] = sweep(B2_F[,!fixed_factors,drop=FALSE],2,sqrt(F_var),'/')
+    F[,!fixed_factors] = sweep(F[,!fixed_factors,drop=FALSE],2,sqrt(F_var),'/')
+    Lambda[!fixed_factors,] = sweep(Lambda[!fixed_factors,,drop=FALSE],1,sqrt(F_var),'*')
 
     # re-scale by var_Eta
     if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
