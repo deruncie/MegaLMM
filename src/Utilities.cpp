@@ -30,7 +30,7 @@ void record_sample_Posterior_array(Map<MatrixXd> current_sample, Map<MatrixXd> P
 void set_MegaLMM_nthreads(int threads) {
   if ( threads > 0 ) {
     // REprintf("not currently implemented");
-      omp_set_num_threads( threads );
+      // omp_set_num_threads( threads );
   }
   // REprintf("Number of threads=%i\n", omp_get_max_threads());
 }
