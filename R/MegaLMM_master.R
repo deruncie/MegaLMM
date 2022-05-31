@@ -351,6 +351,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   for(i in 1:length(RE_setup)){
     re_name = names(RE_setup)[i]
     RE_setup[[i]] = within(RE_setup[[i]],{
+      # recover()
       if(!'ZL' %in% ls()){
         if('K' %in% ls() && !is.null(K)){
           id_names = rownames(K)
@@ -365,7 +366,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
             L = t(ldl_k$P) %*% ldl_k$L[,large_d]
           } else{
             L = as(diag(1,nrow(K)),'dgCMatrix')
-            K_inv = as(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')
+            K_inv = as(with(ldl_k,t(P) %*% crossprod(1/sqrt(d) * solve(L)) %*% P),'dgCMatrix')
           }
           if(is.null(rownames(K))) rownames(K) = 1:nrow(K)
           rownames(K_inv) = rownames(K)

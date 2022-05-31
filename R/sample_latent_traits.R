@@ -25,12 +25,17 @@ sample_latent_traits = function(MegaLMM_state,...) {
       prior_prec = Lambda_prec
     }
 
+    ## 5/31/2022
+    ## I think the following lines are needed and were missing
+    Eta_resid = Eta
+    if(any(fixed_factors)) Eta_resid = Eta_resid - F[,fixed_factors,drop=FALSE] %*% Lambda[fixed_factors,,drop=FALSE]
+    
     for(set in seq_along(Missing_data_map)){
       cols = Missing_data_map[[set]]$Y_cols
       rows = Missing_data_map[[set]]$Y_obs
       if(length(cols) == 0 || length(rows) == 0) next
 
-      Y_set = Qt_list[[set]] %**% Eta[rows,cols,drop=FALSE]
+      Y_set = Qt_list[[set]] %**% Eta_resid[rows,cols,drop=FALSE]
       X_set = cbind(QtX2_R_list[[set]],Qt_list[[set]] %**% F[rows,!fixed_factors,drop=FALSE])
       if(length(Qt_cis_genotypes) == p) {
         Qt_cis_genotypes_set = Qt_cis_genotypes[cols]
