@@ -12,6 +12,45 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// rstdnorm_mat_f
+MatrixXf rstdnorm_mat_f(int n, int p);
+RcppExport SEXP _MegaLMM_rstdnorm_mat_f(SEXP nSEXP, SEXP pSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< int >::type p(pSEXP);
+    rcpp_result_gen = Rcpp::wrap(rstdnorm_mat_f(n, p));
+    return rcpp_result_gen;
+END_RCPP
+}
+// SingleSite_regression_sampler_parallel
+Rcpp::List SingleSite_regression_sampler_parallel(MatrixXf Y, MatrixXf X1_base, Rcpp::List X1_list_, SEXP X2_, SEXP Vx_, Rcpp::IntegerVector h2s_index, Rcpp::List chol_V_list_, VectorXf Y_prec, VectorXf Y_prec_a0, VectorXf Y_prec_b0, MatrixXf prior_prec_alpha1, VectorXf prior_prec_alpha2, MatrixXf prior_mean_beta, MatrixXf prior_prec_beta, SEXP current_alpha1s_, SEXP current_alpha2s_, Rcpp::List BayesAlphabet_parms);
+RcppExport SEXP _MegaLMM_SingleSite_regression_sampler_parallel(SEXP YSEXP, SEXP X1_baseSEXP, SEXP X1_list_SEXP, SEXP X2_SEXP, SEXP Vx_SEXP, SEXP h2s_indexSEXP, SEXP chol_V_list_SEXP, SEXP Y_precSEXP, SEXP Y_prec_a0SEXP, SEXP Y_prec_b0SEXP, SEXP prior_prec_alpha1SEXP, SEXP prior_prec_alpha2SEXP, SEXP prior_mean_betaSEXP, SEXP prior_prec_betaSEXP, SEXP current_alpha1s_SEXP, SEXP current_alpha2s_SEXP, SEXP BayesAlphabet_parmsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< MatrixXf >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< MatrixXf >::type X1_base(X1_baseSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type X1_list_(X1_list_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type X2_(X2_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type Vx_(Vx_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::IntegerVector >::type h2s_index(h2s_indexSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type chol_V_list_(chol_V_list_SEXP);
+    Rcpp::traits::input_parameter< VectorXf >::type Y_prec(Y_precSEXP);
+    Rcpp::traits::input_parameter< VectorXf >::type Y_prec_a0(Y_prec_a0SEXP);
+    Rcpp::traits::input_parameter< VectorXf >::type Y_prec_b0(Y_prec_b0SEXP);
+    Rcpp::traits::input_parameter< MatrixXf >::type prior_prec_alpha1(prior_prec_alpha1SEXP);
+    Rcpp::traits::input_parameter< VectorXf >::type prior_prec_alpha2(prior_prec_alpha2SEXP);
+    Rcpp::traits::input_parameter< MatrixXf >::type prior_mean_beta(prior_mean_betaSEXP);
+    Rcpp::traits::input_parameter< MatrixXf >::type prior_prec_beta(prior_prec_betaSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type current_alpha1s_(current_alpha1s_SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type current_alpha2s_(current_alpha2s_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type BayesAlphabet_parms(BayesAlphabet_parmsSEXP);
+    rcpp_result_gen = Rcpp::wrap(SingleSite_regression_sampler_parallel(Y, X1_base, X1_list_, X2_, Vx_, h2s_index, chol_V_list_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha1, prior_prec_alpha2, prior_mean_beta, prior_prec_beta, current_alpha1s_, current_alpha2s_, BayesAlphabet_parms));
+    return rcpp_result_gen;
+END_RCPP
+}
 // LDLt
 List LDLt(SEXP A_);
 RcppExport SEXP _MegaLMM_LDLt(SEXP A_SEXP) {

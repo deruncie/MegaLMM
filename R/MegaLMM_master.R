@@ -2,6 +2,11 @@
 #'
 #' Function to create run_parameters list for initializing MegaLMM model
 #'
+#' @param which_sampler List with two elements (Y and F) specifying which sampling function
+#'   to use for the observations (Y) and factors (F). Each is a number in 1-4. 1-3 are block updators. 4 is a single-site updater.
+#'   MegaLMM uses 1-3 depending on data dimensions.
+#'   MegaBayesC uses 4 which updates each coefficient individually.
+#' @param run_sampler_times For \code{which_sampler==4}, we can repeat the single-site sampler multiple times to help take larger steps each iteration.
 #' @param scale_Y Should the Y values be centered and scaled? Recommend, except for simulated data.
 #' @param K number of factors
 #' @param h2_divisions A scalar or vector of length equal to number of random effects. In MegaLMM, random
@@ -36,6 +41,8 @@
 #' @export
 #'
 MegaLMM_control = function(
+                        which_sampler = list(Y = 1,F = 1),
+                        run_sampler_times = 1,
                         scale_Y = c(T,F),
                         K = 20, h2_divisions = 100, h2_step_size = NULL,
                         drop0_tol = 1e-14, K_eigen_tol = 1e-10,
@@ -50,7 +57,12 @@ MegaLMM_control = function(
 
   formals_named = formals()
   formals_named = formals_named[names(formals_named) != '...']
-  all_args = lapply(formals_named,function(x) eval(x)[1])
+  all_args = lapply(formals_named,function(x) {
+    if(!is.list(eval(x))) {
+      eval(x)[1]
+    } else {
+      eval(x)
+    }})
   passed_args = lapply(as.list(match.call())[-1],eval)
   if(any(names(passed_args) %in% names(formals_named) == F)){
     unused_names = names(passed_args)[names(passed_args) %in% names(formals_named) == F]
@@ -202,7 +214,8 @@ MegaLMM_priors = function(
 setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL, cis_genotypes = NULL, Lambda_fixed = NULL,
                             run_parameters = MegaLMM_control(),
                             posteriorSample_params = c('Lambda','U_F','F','delta','tot_F_prec','F_h2','tot_Eta_prec',
-                                                       'resid_h2', 'B1', 'B2_F','B2_R','U_R','cis_effects','Lambda_m_eff'),
+                                                       'resid_h2', 'B1', 'B2_F','B2_R','U_R','cis_effects','Lambda_m_eff',
+                                                       'Lambda_pi','B2_R_pi','B2_F_pi'),
                             posteriorMean_params = c(),
                             posteriorFunctions = list(),
                             run_ID = 'MegaLMM_run'){
@@ -255,7 +268,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
 
   # -------- regressions ---------- #
   # X2_F and X2_R (and V_F and V_R) are the coefficient matrices for the regularized regression coefficients
-  # these are specifed as lists with either X (n x b) or {U(nxm),V(mxb)}
+  # these are specified as lists with either X (n x b) or {U(nxm),V(mxb)}
   X2_R = matrix(0,n,0)
   X2_F = matrix(0,n,0)
   U2_F = X2_F
@@ -355,18 +368,24 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
       if(!'ZL' %in% ls()){
         if('K' %in% ls() && !is.null(K)){
           id_names = rownames(K)
-          ldl_k = LDLt(K)
-          large_d = ldl_k$d > run_parameters$K_eigen_tol
-          r_eff = sum(large_d)
-          # if need to use reduced rank model, then use D of K in place of K and merge L into Z
-          # otherwise, use original K, set L = Diagonal(1,r)
-          if(r_eff < length(ldl_k$d)) {
-            K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
-            K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
-            L = t(ldl_k$P) %*% ldl_k$L[,large_d]
-          } else{
+          if(is(K,'Matrix') & isDiagonal(K)) {
             L = as(diag(1,nrow(K)),'dgCMatrix')
-            K_inv = as(with(ldl_k,t(P) %*% crossprod(1/sqrt(d) * solve(L)) %*% P),'dgCMatrix')
+            K_inv = as(diag(1/diag(K)),'dgCMatrix')
+          } else {
+            ldl_k = LDLt(K)
+            large_d = ldl_k$d > run_parameters$K_eigen_tol
+            r_eff = sum(large_d)
+            # if need to use reduced rank model, then use D of K in place of K and merge L into Z
+            # otherwise, use original K, set L = Diagonal(1,r)
+            if(r_eff < length(ldl_k$d)) {
+              K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
+              K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
+              L = t(ldl_k$P) %*% ldl_k$L[,large_d]
+            } else{
+              L = as(diag(1,nrow(K)),'dgCMatrix')
+              K_inv = as(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')
+            }
+            rm(list=c('ldl_k','large_d','r_eff'))
           }
           if(is.null(rownames(K))) rownames(K) = 1:nrow(K)
           rownames(K_inv) = rownames(K)
@@ -682,9 +701,11 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
 
     B2_R = 0*matrix(rnorm(b2_R*p),b2_R,ncol = p)
     colnames(B2_R) = traitnames
+    rownames(B2_R) = colnames(X2_R)
 
     # Factor fixed effects
     B2_F = 0*matrix(rnorm(b2_F * K),b2_F,K)
+    rownames(B2_F) = colnames(X2_F)
 
     XB = X1 %**% B1 + X2_R %*% B2_R
 
@@ -820,7 +841,18 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
 
   # cholesky decompositions (RtR) of each K_inverse matrix
-  chol_Ki_mats = lapply(RE_setup,function(re) as(chol(as.matrix(re$K_inv)),'dgCMatrix'))
+  chol_Ki_mats = lapply(RE_setup,function(re) {
+    K_inv = re$K_inv
+    if(is(K_inv,'Matrix')) {
+      if(isDiagonal(K_inv)) {
+        sparseMatrix(i=1:nrow(K_inv),j=1:nrow(K_inv),x=sqrt(diag(K_inv)))
+      } else{
+        as(chol(forceSymmetric(K_inv)),'dgCMatrix')
+      }
+    } else {
+      as(chol(K_inv),'dgCMatrix')
+    }
+  })
 
   Qt_list = list()
   # QtZL_list = list()
@@ -853,7 +885,12 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       Qt = t(Q_ZU %**% RKRt_U)
     } else{
       ZKZt = with(RE_setup[[1]],ZL[x,,drop=FALSE] %*% K %*% t(ZL[x,,drop=FALSE]))
-      result = svd(ZKZt)
+      if(is(ZKZt,'Matrix') & isDiagonal(ZKZt)) {
+        nn = nrow(ZKZt)
+        result = list(d = diag(ZKZt),u = sparseMatrix(i=1:nn,j=1:nn,x=1))
+      } else{
+        result = svd(ZKZt)
+      }
       Qt = t(result$u)
     }
     Qt = as(drop0(as(Qt,'dgCMatrix'),tol = run_parameters$drop0_tol),'dgCMatrix')
@@ -896,9 +933,15 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
     }
     
-    if(set == 1 || sum(priors$h2_priors_resids[-1]) > 0) {
+    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
+    if(length(RE_setup) == 1 & isDiagonal(ZtZ_set) & all(sapply(chol_Ki_mats,isDiagonal))) {
+      # in the case of 1 random effect with diagonal covariance matrix, we can skip the expensive calculations
+      chol_ZtZ_Kinv_list_list[[set]] = sapply(1:length(h2s_matrix),function(i) {
+        nn = nrow(ZtZ_set)
+        sparseMatrix(i=1:nn,j=1:nn,x = sqrt(1/(1-h2s_matrix[1,i])*diag(ZtZ_set) + 1/h2s_matrix[1,i]*diag(chol_Ki_mats[[1]])^2))
+      })
+    } else if(set == 1 || sum(priors$h2_priors_resids[-1]) > 0) {
       # Note: set >1 only applies to the resids (factors always use set==1).
-      ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
       chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,
                                                                run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
     } else{
@@ -935,6 +978,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 #' Print more detailed statistics on current MegaLMM state
 #' @seealso \code{\link{MegaLMM_control}}, \code{\link{sample_MegaLMM}}, \code{\link{MegaLMM_init}},
 #'   \code{\link{print.MegaLMM_state}}, \code{\link{plot.MegaLMM_state}}
+#' @export
 summary.MegaLMM_state = function(MegaLMM_state){
   with(MegaLMM_state,{
     cat(
@@ -956,6 +1000,7 @@ summary.MegaLMM_state = function(MegaLMM_state){
 #' Print statistics on current MegaLMM state
 #' @seealso \code{\link{MegaLMM_control}}, \code{\link{sample_MegaLMM}}, \code{\link{MegaLMM_init}},
 #'   \code{\link{summary.MegaLMM_state}}, \code{\link{plot.MegaLMM_state}}
+#' @export
 print.MegaLMM_state = function(MegaLMM_state){
   with(MegaLMM_state,{
     cat(
