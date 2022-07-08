@@ -389,7 +389,6 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
           }
           if(is.null(rownames(K))) rownames(K) = 1:nrow(K)
           rownames(K_inv) = rownames(K)
-          rm(list=c('ldl_k','large_d','r_eff'))
         } else if ('K_inv' %in% ls() && !is.null(K_inv)){
           id_names = rownames(K_inv)
           if(is.null(rownames(K_inv))) rownames(K_inv) = 1:nrow(K_inv)
