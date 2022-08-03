@@ -6,3 +6,5 @@ src/*.o
 src/*.so
 src/*.dll
 vignettes/MegaLMM_example*
+vignettes/MegaLMM_fold*
+inst/doc

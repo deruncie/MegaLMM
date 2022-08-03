@@ -9,7 +9,8 @@ initialize_MegaLMM(
   ncores = my_detectCores(),
   Qt_list = NULL,
   chol_R_list = NULL,
-  chol_ZKZt_list = NULL
+  chol_ZKZt_list = NULL,
+  verbose = TRUE
 )
 }
 \arguments{

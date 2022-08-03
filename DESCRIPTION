@@ -33,6 +33,8 @@ LinkingTo:
   RcppEigen (>= 0.3.3.3.0),
   RcppZiggurat
 SystemRequirements: GNU make
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 ByteCompile: TRUE
 VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
