@@ -85,7 +85,7 @@ Rcpp::List make_chol_ZtZ_Kinv_list(Rcpp::List chol_Ki_mats_,
                                    Map<MatrixXd> h2s_matrix,
                                    MSpMat ZtZ,
                                    double drop0_tol,
-                                   SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
+                                   bool verbose, SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
                                    int ncores) {
   int s = h2s_matrix.cols();
 
@@ -112,8 +112,10 @@ Rcpp::List make_chol_ZtZ_Kinv_list(Rcpp::List chol_Ki_mats_,
       MatrixXd chol_ZtZ_Kinv_R = chol_ZtZ_Kinv.matrixU();
       chol_ZtZ_Kinv_list[j] = chol_ZtZ_Kinv_R.sparseView(0,drop0_tol);
     }
-    int pb_state = as<int>(getTxtProgressBar(pb));
-    setTxtProgressBar(pb,pb_state+(end-start));
+    if(verbose) {
+      int pb_state = as<int>(getTxtProgressBar(pb));
+      setTxtProgressBar(pb,pb_state+(end-start));
+    }
   }
 
   Rcpp::List chol_ZtZ_Kinv_list_out(s);
@@ -178,7 +180,7 @@ SpMat make_chol_R(const std::vector<R_matrix>& ZKZts, const VectorXd h2s, const 
 Rcpp::List make_chol_V_list(Rcpp::List ZKZts_,
                             Map<MatrixXd> h2s_matrix,
                             double drop0_tol,
-                            SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
+                            bool verbose, SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
                             int ncores) {
   int s = h2s_matrix.cols();
 
@@ -198,8 +200,10 @@ Rcpp::List make_chol_V_list(Rcpp::List ZKZts_,
     for(std::size_t j = start; j < end; j++){
       chol_R_list[j] = make_chol_R(ZKZts, h2s_matrix.col(j), drop0_tol);
     }
-    int pb_state = as<int>(getTxtProgressBar(pb));
-    setTxtProgressBar(pb,pb_state+(end-start));
+    if(verbose) {
+      int pb_state = as<int>(getTxtProgressBar(pb));
+      setTxtProgressBar(pb,pb_state+(end-start));
+    }
   }
 
   Rcpp::List chol_R_list_out(s);

@@ -773,7 +773,7 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
 #' @return MegaLMM_state object with \code{Qt_list}, \code{chol_R_list} and \code{chol_ZKZt_list} added to run_variables
 #' @export
 #'
-initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL) {
+initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list = NULL, chol_R_list = NULL, chol_ZKZt_list = NULL,verbose=TRUE) {
   # calculates Qt_list, chol_R_list and chol_ZKZt_list
   # returns MegaLMM_state
 
@@ -782,7 +782,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
   priors = MegaLMM_state$priors
   Y_missing = run_parameters$observation_model_parameters$observation_setup$Y_missing
   h2s_matrix = MegaLMM_state$data_matrices$h2s_matrix
-  verbose = run_parameters$verbose
+  # verbose = run_parameters$verbose
 
   RE_setup = data_matrices$RE_setup
   ZL = data_matrices$ZL
@@ -806,6 +806,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
   # do calculations in several chunks
   n_matrices = 2*ncol(h2s_matrix)
 
+  pb = 0
   if(verbose) {
     print(sprintf("Pre-calculating random effect inverse matrices for %d groups of traits and %d sets of random effect weights", length(Missing_data_map), ncol(h2s_matrix)))
     pb = txtProgressBar(min=0,max = length(Missing_data_map) * n_matrices,style=3)
@@ -887,7 +888,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
     }
 
-    chol_V_list_list[[set]] = make_chol_V_list(ZKZts_set,h2s_matrix,run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
+    chol_V_list_list[[set]] = make_chol_V_list(ZKZts_set,h2s_matrix,run_parameters$drop0_tol,
+                                               verbose,pb,setTxtProgressBar,getTxtProgressBar,ncores)
     # convert any to dense if possible
     for(i in 1:length(chol_V_list_list[[set]])){
       chol_V_list_list[[set]][[i]] = drop0(chol_V_list_list[[set]][[i]],tol = run_parameters$drop0_tol)
@@ -900,7 +902,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       # Note: set >1 only applies to the resids (factors always use set==1).
       ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
       chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,
-                                                               run_parameters$drop0_tol,pb,setTxtProgressBar,getTxtProgressBar,ncores)
+                                                               run_parameters$drop0_tol,
+                                                               verbose,pb,setTxtProgressBar,getTxtProgressBar,ncores)
     } else{
       # if the prior is concentrated at h2s==0, then we don't need to sample U. All values will be 0.
       chol_ZtZ_Kinv_list_list[[set]] = lapply(seq_along(priors$h2_priors_resids),function(x) matrix(1,0,0))
