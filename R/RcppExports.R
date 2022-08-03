@@ -53,12 +53,12 @@ LDLt <- function(A_) {
     .Call(`_MegaLMM_LDLt`, A_)
 }
 
-make_chol_ZtZ_Kinv_list <- function(chol_Ki_mats_, h2s_matrix, ZtZ, drop0_tol, pb, setTxtProgressBar, getTxtProgressBar, ncores) {
-    .Call(`_MegaLMM_make_chol_ZtZ_Kinv_list`, chol_Ki_mats_, h2s_matrix, ZtZ, drop0_tol, pb, setTxtProgressBar, getTxtProgressBar, ncores)
+make_chol_ZtZ_Kinv_list <- function(chol_Ki_mats_, h2s_matrix, ZtZ, drop0_tol, verbose, pb, setTxtProgressBar, getTxtProgressBar, ncores) {
+    .Call(`_MegaLMM_make_chol_ZtZ_Kinv_list`, chol_Ki_mats_, h2s_matrix, ZtZ, drop0_tol, verbose, pb, setTxtProgressBar, getTxtProgressBar, ncores)
 }
 
-make_chol_V_list <- function(ZKZts_, h2s_matrix, drop0_tol, pb, setTxtProgressBar, getTxtProgressBar, ncores) {
-    .Call(`_MegaLMM_make_chol_V_list`, ZKZts_, h2s_matrix, drop0_tol, pb, setTxtProgressBar, getTxtProgressBar, ncores)
+make_chol_V_list <- function(ZKZts_, h2s_matrix, drop0_tol, verbose, pb, setTxtProgressBar, getTxtProgressBar, ncores) {
+    .Call(`_MegaLMM_make_chol_V_list`, ZKZts_, h2s_matrix, drop0_tol, verbose, pb, setTxtProgressBar, getTxtProgressBar, ncores)
 }
 
 record_sample_Posterior_array <- function(current_sample, Posterior_array_, sp_num) {

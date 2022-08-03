@@ -5,6 +5,8 @@
 \title{Set MegaLMM run parameters}
 \usage{
 MegaLMM_control(
+  which_sampler = list(Y = 1, F = 1),
+  run_sampler_times = 1,
   scale_Y = c(T, F),
   K = 20,
   h2_divisions = 100,
@@ -22,6 +24,13 @@ MegaLMM_control(
 )
 }
 \arguments{
+\item{which_sampler}{List with two elements (Y and F) specifying which sampling function
+to use for the observations (Y) and factors (F). Each is a number in 1-4. 1-3 are block updators. 4 is a single-site updater.
+MegaLMM uses 1-3 depending on data dimensions.
+MegaBayesC uses 4 which updates each coefficient individually.}
+
+\item{run_sampler_times}{For \code{which_sampler==4}, we can repeat the single-site sampler multiple times to help take larger steps each iteration.}
+
 \item{scale_Y}{Should the Y values be centered and scaled? Recommend, except for simulated data.}
 
 \item{K}{number of factors}

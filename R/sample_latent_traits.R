@@ -81,7 +81,6 @@ sample_latent_traits = function(MegaLMM_state,...) {
         tot_Eta_prec[cols] = new_samples$Y_prec 
       } else if(which_sampler$Y == 4){
         new_samples = SingleSite_regression_sampler_parallel(
-          which_sampler = which_sampler$Y,
           Y = Y_set,
           X1_base = QtX1_list[[set]],
           X1_list_ = Qt_cis_genotypes_set,
@@ -226,7 +225,6 @@ sample_latent_traits = function(MegaLMM_state,...) {
       tot_F_prec[] = new_samples$Y_prec
     } else if(which_sampler$F == 4) {
       new_samples = SingleSite_regression_sampler_parallel(
-        which_sampler = which_sampler$F,
         Y = Qt_F,
         X1_base = matrix(0,length(rows),0),
         X1_list_ = NULL,
