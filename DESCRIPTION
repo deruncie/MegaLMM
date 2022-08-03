@@ -24,7 +24,8 @@ Imports:
   reshape2,
   coda,
   splines,
-  MASS
+  MASS,
+  pryr
 Suggests:
   knitr, 
   rmarkdown
