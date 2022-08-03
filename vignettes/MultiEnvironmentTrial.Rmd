@@ -242,6 +242,8 @@ We use R's `formula` syntax to construct the design matrices `X` and `Z`. In def
 
 The random effect syntax in a formula is `(a|X)`. This specifies a variance for each level of `a` (*e.g.* environment) for the location effects for each level of `X` (*e.g.* genotype, *i.e.* variance among genotypes in each environment). In `lme4` syntax, there would additionally be covariances between the levels of `a` within each level of `X`. However we cannot model these covariances in `MegaLMM`, so this syntax makes independent variances for each level of `a`. Note, however, that each level of `a` introduces a new variance into the model, which exponentially increases the memory requirements! It is much better, if possible, to introduce each level of `a` as a separate trait!
 
+Random effects have two parts: **location effects** which are the values for each level (*e.g.* breeding values for each individual) and **variances** which are the population variances of the location effects. We model the location effects as following a multivariate normal distribution with covariance equal to a known covariance matrix (**K**) times a **variance proportion** ($h^2$) times a phenotypic variance ($\sigma^2$). This differs slightly from typical parameterizations of random effects, which uses a separate variance for each random effect. In `MegaLMM` we instead model the proportion that each random effect contributes to the total, so all $h^2_i$ values sum to 1, and use a discrete prior over the interval [0,1] for this parameter. This gives you a lot of flexibility for specifying prior distributions.
+
 #### Factors
 
 In most factor models the number of factors `K` is a critical parameter, and models with different numbers of parameters (either larger or smaller than optimal) may give very different answers. This is generally not the case in `MegaLMM`. In `MegaLMM` we use a prior to order and regularize the importance of the factors, enforcing that high-order factors explain less and less of the overall variation. Therefore the highest-order factors are generally extremely unimportant, and adding a few more or fewer of these unimportant factors won't change the influence of the first factors. It is important to set `K` large enough to capture most of the covariation in `Y`, but once it's large enough, additional values will not likely affect the model much.
@@ -382,7 +384,7 @@ maps = make_Missing_data_map(MegaLMM_state,max_NA_groups = ncol(Y)+1,verbose=F)
 maps$map_results
 ```
 
-Using the 15h map above might be a good option:
+Using the 15th map above might be a good option:
 
 ```{r}
 MegaLMM_state = set_Missing_data_map(MegaLMM_state,maps$Missing_data_map_list[[15]])
