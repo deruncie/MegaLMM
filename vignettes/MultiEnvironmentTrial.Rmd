@@ -631,8 +631,8 @@ dim(MegaLMM_state$Posterior$Lambda)
 To load all posterior samples of a particular parameter back into `MegaLMM_state` so that you can work with them, you can either call:
 
 ```{r}
-MegaLMM_state$Posterior$U = load_posterior_param(MegaLMM_state,'U')
-dim(MegaLMM_state$Posterior$U)
+U = load_posterior_param(MegaLMM_state,'U')
+dim(U)
 ```
 
 or you can reload all samples of all stored parameers with:
@@ -648,7 +648,7 @@ As you can see above, we have collected 500 posterior samples. The samples for e
 To assess convergence of a parameter, it's helpful to look at traceplots. You make a traceplot of a single parameter by extracting its chain and plotting it:
 
 ```{r}
-plot(MegaLMM_state$Posterior$U[,1,2],type='l')
+plot(U[,1,2],type='l')
 ```
 
 But it'd take a lot to make this plot for every element of every matrix. As a shortcut, the function `traceplot_array` can make lots of traceplots for a matrix parameter:
@@ -662,12 +662,12 @@ This will create a pdf booklet stored in the `[run_ID]` folder (*note in the nex
 Often we want to calculate summaries of the posterior samples. Two functions are provided:
 
 ```{r}
-U_hat = get_posterior_mean(MegaLMM_state$Posterior$U)
+U_hat = get_posterior_mean(U)
 dim(U_hat)
 ```
 
 ```{r}
-U_HPD = get_posterior_HPDinterval(MegaLMM_state$Posterior$U,prob = 0.95)
+U_HPD = get_posterior_HPDinterval(U,prob = 0.95)
 dim(U_HPD)
 ```
 
@@ -704,11 +704,11 @@ dim(R_samples)
 
 ### Extending the chain
 
-If you look at your posterior samples and decide that the model hasn't really converged, you can treat the current chain as an extended burnin and re-start the collection of posterior samples.
+If you look at your posterior samples and decide that the model hasn't really converged, you can treat the current chain as an extended burnin and re-start the collection of posterior samples. I won't run the code here so we don't lose our current samples!
 
 ```{r}
-MegaLMM_state = clear_Posterior(MegaLMM_state)
-print(MegaLMM_state)
+#MegaLMM_state2 = clear_Posterior(MegaLMM_state)
+#print(MegaLMM_state2)
 ```
 
 You'll see the `Posterior_samples` value has been set to 0.
