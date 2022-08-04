@@ -1,6 +1,12 @@
 ---
 title: "MultiEnvironmentTrial"
-output: rmarkdown::html_vignette
+output: 
+  html_notebook:
+    toc: yes
+    toc_float:
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
 vignette: >
   %\VignetteIndexEntry{MultiEnvironmentTrial}
   %\VignetteEngine{knitr::rmarkdown}
@@ -596,3 +602,137 @@ plot(MegaLMM_Uhat_accuracy,MegaLMM_Eta_mean_accuracy);abline(0,1)
 ```
 
 We also see that because `MegaLMM` can also look at non-additive-genetic covariances among lines (*i.e.* residual correlations that are not explained by `K` but still must be genetic), we generally gained a bit of additional accuracy.
+
+# Additional package details
+
+You can get a summary of the MCMC chain with the `print` and `summary` methods:
+
+```{r}
+print(MegaLMM_state)
+```
+
+```{r}
+summary(MegaLMM_state)
+```
+
+### Working with the posterior samples
+
+As I mentioned above, posterior samples can be saved to the disk like this:
+
+```{r}
+MegaLMM_state = save_posterior_chunk(MegaLMM_state)
+```
+
+When you do this, you no longer have direct access to the samples you've collected inside the `MegaLMM_state` object. Instead, they are stored in the folder: `[run_ID]/Posterior/` where `[run_ID]` is the name you gave to this model run above.
+
+```{r}
+dim(MegaLMM_state$Posterior$Lambda)
+```
+
+To load all posterior samples of a particular parameter back into `MegaLMM_state` so that you can work with them, you can either call:
+
+```{r}
+MegaLMM_state$Posterior$U = load_posterior_param(MegaLMM_state,'U')
+dim(MegaLMM_state$Posterior$U)
+```
+
+or you can reload all samples of all stored parameers with:
+
+```{r}
+MegaLMM_state$Posterior = reload_Posterior(MegaLMM_state)
+dim(MegaLMM_state$Posterior$Lambda)
+dim(MegaLMM_state$Posterior$F_h2)
+```
+
+As you can see above, we have collected 500 posterior samples. The samples for each parameter are stored as a 3-dimensional array. All parameters of the `MegaLMM` model are stored as 2-dimensional matrices. So `MegaLMM_state$Posterior\$Lambda[1,,]` will return the 1st posterior sample of the parameter Lambda, which has dimension $15 \times 19$ in this model because `K=15` and `t=19`. The parameter `F_h2` stores the variance component proportions for the random effect `Line` for the 15 latent factors. There is only 1 random effect, so the dimension of this matrix is $1 \times 15$.
+
+To assess convergence of a parameter, it's helpful to look at traceplots. You make a traceplot of a single parameter by extracting its chain and plotting it:
+
+```{r}
+plot(MegaLMM_state$Posterior$U[,1,2],type='l')
+```
+
+But it'd take a lot to make this plot for every element of every matrix. As a shortcut, the function `traceplot_array` can make lots of traceplots for a matrix parameter:
+
+```{r}
+traceplot_array(MegaLMM_state$Posterior$Lambda,facet_dim = 2,name = 'Lambda')
+```
+
+This will create a pdf booklet stored in the `[run_ID]` folder (*note in the next update, this will be changed to directly use the file name provided*). This will take the rows (`facet_dim=2`) or columns (`facet_dim=3`) of the provided parameter array and make a faceted plot, where within each facet a sampling of the values in that row/column will be selected (those with the largest posterior means) and traceplots will be made. Generally it is the largest values that are the most interesting, and will be most diagnostic of sampling issues.
+
+Often we want to calculate summaries of the posterior samples. Two functions are provided:
+
+```{r}
+U_hat = get_posterior_mean(MegaLMM_state$Posterior$U)
+dim(U_hat)
+```
+
+```{r}
+U_HPD = get_posterior_HPDinterval(MegaLMM_state$Posterior$U,prob = 0.95)
+dim(U_HPD)
+```
+
+The latter function will calculate lower and upper 0.95 Highest Posterior Density bounds for each element of the matrix `U`.
+
+Finally, we can calculate functions of the parameters, as long as all are stored in the Posterior database. For example, we can calculate the phenotypic covariance matrix at each posterior sample like this:
+
+```{r}
+P_samples = get_posterior_FUN(MegaLMM_state,t(Lambda) %*% Lambda + diag(1/tot_Eta_prec[1,]))
+dim(P_samples)
+```
+
+### Extracting random effect covariances
+
+We've focused on predicting location effects of the random effects of line for each trait (yield in each environment). But we can also extract the estimates and posterior distributions on the key variance-covariance parameters $\mathbf{G}$ and $\mathbf{R}$. The model for the genetic covariance in MegaLMM is: $\mathbf{G} = \mathbf{\Lambda^T \Sigma_{h^2_F} \Lambda} + \mathbf{\Psi \otimes \Sigma_{h^2_R}}$
+
+We can calculate this using the same syntax:
+
+```{r}
+G_samples = get_posterior_FUN(MegaLMM_state,t(Lambda) %*% diag(F_h2[1,]) %*% Lambda + diag(resid_h2[,1]/tot_Eta_prec[1,]))
+dim(G_samples)
+```
+
+But, if you look back, we actually defined this as one of the `posterior_functions` we specifed in the beginning, so it's actually already calculated for us, and we can just load the samples of this matrix directly:
+
+```{r}
+G_samples = load_posterior_param(MegaLMM_state,'G')
+R_samples = load_posterior_param(MegaLMM_state,'R')
+dim(G_samples)
+dim(R_samples)
+```
+
+### Extending the chain
+
+If you look at your posterior samples and decide that the model hasn't really converged, you can treat the current chain as an extended burnin and re-start the collection of posterior samples.
+
+```{r}
+MegaLMM_state = clear_Posterior(MegaLMM_state)
+print(MegaLMM_state)
+```
+
+You'll see the `Posterior_samples` value has been set to 0.
+
+### Saving the model object
+
+Our current model object is not that big, and so you can save it directly:
+
+```{r}
+saveRDS(MegaLMM_state,file = 'MegaLMM_state_run_01.rds')
+```
+
+And then come back and reload it and go:
+
+```{r}
+MegaLMM_state = readRDS('MegaLMM_state_run_01.rds')
+print(MegaLMM_state)
+```
+
+However, to re-start the sampling, all you actually need is the initialized `MegaLMM_state` object and a stored `current_state` slot. This slot is a list with the current state of all parameters as well as the random number generator. This gets automatically saved in the `[run_ID]` directory, so you can re-run the `setup_model_MegaLMM()` function, add priors, initialize, etc, and then reload the `current_state` and resume the chain where you left off:
+
+```{r}
+MegaLMM_state$current_state = readRDS('MegaLMM_fold_01/current_state.rds')
+```
+
+### Convergence issues
+
+You may have noticed in some diagnostics that parameters of `Lambda` do seem to be drifting a lot, suggesting that the chain has not converged. This suggests you should probably run this model much longer. That is probably true. However, in my experience, posterior distributions of location effects like `U` do not change much with much longer chains - what's happening is that the magnitude of values of `Lambda` and the magnitude of corresponding columns of `F` are not identified in the likelihood, because the true term in the model is `F * Lambda`. So there's a lot of drift (poor mixing) in the magnitudes of those parameters, ever if their product is mixing well. Also, the order of columns of F (and rows of Lambda) is not identified in the likelihood. The prior does provide a fairly clear ordering, but it's still not unusual to have factors switch order. When this happens, `Lambda[1,3]` may take on the previous identity of `Lambda[2,3]` and so traceplots of `Lambda[1,3]` will not look good (or posterior means of this parameter. Therefore, I advise caution interpreting Lambda.
