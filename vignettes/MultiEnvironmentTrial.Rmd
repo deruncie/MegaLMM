@@ -226,12 +226,6 @@ $$
 
 The model for each column of `F` is similar. This differs from most Bayesian LMMs in the parameterization of the variance components, but has some conceptual and algorithmic advantages. For priors, we use an inverse gamma prior for $\sigma^2$ and a discrete prior on $h^2$. Specification of the priors is described below.
 
-Visually, the model can be viewed like this:
-
-![Model outline](Conceptual_model_v4.png)
-
-**Figure 1** from Runcie et al 2021.
-
 The unique aspects of **MegaLMM** relative to other factor models are:
 
 1.  The residuals of `Y` after accounting for the factors are not assumed to be iid, but are modeled with independent (across traits) LMMs accounting for both fixed and random effects.
