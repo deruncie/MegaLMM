@@ -13,7 +13,7 @@ Note: the package requires OpenMP which causes problems on a Mac. I was able to 
 
 
 ### Introduction:
-Please see the vignette `Running_MegaLMM.Rmd` for an introduction to using **MegaLMM**
+Please see the vignette `MultiEnvironmentTrial.Rmd` for an introduction to using **MegaLMM**. This will apply **MegaLMM** to the analysis of a very incomplete multi-environment trial, and go through many of the key functions in the package
 
 If you would like to build the vignette (see below), do:
 
@@ -22,7 +22,7 @@ devtools::install_github('deruncie/MegaLMM', build_opts = c("--no-resave-data", 
 ```
 
 ```{r}
-vignette(topic = 'Running_MegaLMM',package='MegaLMM')
+vignette(topic = 'MultiEnvironmentTrial',package='MegaLMM')
 ```
 
 ### Background

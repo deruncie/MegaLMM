@@ -42,7 +42,6 @@ We will use the `MegaLMM`, `rrBLUP`, and `ggplot2` packages.
 # install.packages('rrBLUP','ggplot2')  # uncomment if needed to install
 library(rrBLUP)
 library(ggplot2)
-options(width=80)
 ```
 
 `MegaLMM` is installed from github:
@@ -688,7 +687,9 @@ We've focused on predicting location effects of the random effects of line for e
 We can calculate this using the same syntax:
 
 ```{r}
-G_samples = get_posterior_FUN(MegaLMM_state,t(Lambda) %*% diag(F_h2[1,]) %*% Lambda + diag(resid_h2[,1]/tot_Eta_prec[1,]))
+G_samples = get_posterior_FUN(MegaLMM_state,
+              t(Lambda) %*% diag(F_h2[1,]) %*% Lambda + diag(resid_h2[,1]/tot_Eta_prec[1,])
+            )
 dim(G_samples)
 ```
 
