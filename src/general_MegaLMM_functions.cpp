@@ -627,7 +627,7 @@ Rcpp::List regression_sampler_parallel(
       }
       // REprintf("Number of threads=%i\\n", omp_get_max_threads());
       // Rcout <<trait_set.size() << " " << omp_get_max_threads() << std::endl;
-      #pragma omp parallel for
+      #pragma omp parallel for num_threads(get_MegaLMM_nthreads())  
       for(int i = 0; i < trait_set.size(); i++){
         int j = trait_set[i];
         MatrixXd X1;
@@ -769,7 +769,7 @@ MatrixXd sample_MME_ZKZts_c(
   ArrayXd h2_e = 1.0 - h2s.colwise().sum().array();
   ArrayXd pes = tot_Eta_prec.array() / h2_e.array();
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(get_MegaLMM_nthreads())
   for(std::size_t j = 0; j < p; j++){
     int h2_index = h2s_index[j] - 1;
     if(h2_e[h2_index] == 1.0) {
@@ -804,7 +804,7 @@ MatrixXd log_p_h2s(
 
   MatrixXd log_ps(b,p);
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(get_MegaLMM_nthreads())
   for(std::size_t i = 0; i < b; i++){
     R_matrix chol_R = chol_V_list[i];
     MatrixXd y_std(n,b);
@@ -839,7 +839,7 @@ VectorXi sample_h2s(
 
   VectorXi h2s_index(p);
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(get_MegaLMM_nthreads())
   for(std::size_t j = 0; j < p; j++){
     // for(int j = 0; j < p; j++){
     double max_col = log_ps.col(j).maxCoeff();
@@ -911,7 +911,7 @@ VectorXi sample_h2s_discrete_MH_c(
   load_R_matrices_list(chol_V_list_, chol_V_list);
 
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(get_MegaLMM_nthreads())
   for(std::size_t j = 0; j < p; j++){
     int old_state = h2_index[j] - 1;
     VectorXd candidate_new_states = find_candidate_states(h2s_matrix,step_size,old_state);
@@ -1209,7 +1209,7 @@ MatrixXd sample_coefs_set_c(    // return pxn matrix
   MatrixXd coefs(p,n);
 
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(get_MegaLMM_nthreads())
   for(std::size_t j = 0; j < n; j++){
     MatrixXd Y = y_list[j];
     MatrixXd X = X_list[j];
@@ -1282,7 +1282,7 @@ MatrixXd get_fitted_set_c(  // returns n_tot x p matrix in same order as data
 
   MatrixXd Y_fitted(total_obs,n_traits);
 
-  #pragma omp parallel for
+  #pragma omp parallel for num_threads(get_MegaLMM_nthreads())
   for(std::size_t j = 0; j < n; j++){
     int b_X = X_list[j].cols();
     int b_tot = coefs.rows() / n_traits;

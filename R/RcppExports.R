@@ -17,8 +17,20 @@ record_sample_Posterior_array <- function(current_sample, Posterior_array_, sp_n
     invisible(.Call(`_MegaLMM_record_sample_Posterior_array`, current_sample, Posterior_array_, sp_num))
 }
 
-set_MegaLMM_nthreads <- function(threads) {
-    invisible(.Call(`_MegaLMM_set_MegaLMM_nthreads`, threads))
+get_MegaLMM_nthreads <- function() {
+    .Call(`_MegaLMM_get_MegaLMM_nthreads`)
+}
+
+set_MegaLMM_nthreads <- function(n_threads) {
+    invisible(.Call(`_MegaLMM_set_MegaLMM_nthreads`, n_threads))
+}
+
+get_omp_nthreads <- function() {
+    invisible(.Call(`_MegaLMM_get_omp_nthreads`))
+}
+
+set_omp_nthreads <- function(threads) {
+    invisible(.Call(`_MegaLMM_set_omp_nthreads`, threads))
 }
 
 #' Multiplies two matrices (sparse or dense by dense), returns the product as a dense matrix

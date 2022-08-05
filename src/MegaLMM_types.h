@@ -36,3 +36,8 @@ struct R_matrix {
   R_matrix(Map<MatrixXd> dense_, MSpMat sparse_,bool isDense_) : dense(dense_), sparse(sparse_), isDense(isDense_) {}
 };
 void load_R_matrices_list(const Rcpp::List X_list, std::vector<R_matrix>& X_vector);
+
+static int MegaLMM_nthreads = 1;
+
+int get_MegaLMM_nthreads();
+void set_MegaLMM_nthreads(int);
