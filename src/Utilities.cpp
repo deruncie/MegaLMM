@@ -66,6 +66,7 @@ void get_omp_nthreads() {
 void set_omp_nthreads(int threads) {
 #ifdef _OPENMP
   omp_set_num_threads( threads );
+  set_MegaLMM_nthreads(get_MegaLMM_nthreads()); // ensure this is less than omp_get_max_threads()
   REprintf("Number of threads=%i\n", omp_get_max_threads());
 #endif
 }
