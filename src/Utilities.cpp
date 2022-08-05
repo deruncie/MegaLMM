@@ -5,12 +5,6 @@
 // [[Rcpp::depends(RcppEigen)]]
 using namespace Eigen; 
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-// [[Rcpp::plugins(openmp)]]
-
-
 // [[Rcpp::export()]]
 void record_sample_Posterior_array(Map<MatrixXd> current_sample, Map<MatrixXd> Posterior_array_, int sp_num) {
   int nrow_sample = current_sample.rows();
