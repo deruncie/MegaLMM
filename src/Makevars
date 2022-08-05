@@ -1,2 +1,2 @@
 PKG_CPPFLAGS=-fopenmp
-PKG_LIBS +=-lomp
+#PKG_LIBS +=-lomp
