@@ -1,2 +1,2 @@
-PKG_CPPFLAGS=-fopenmp
+#PKG_CPPFLAGS=-Xclang -fopenmp
 #PKG_LIBS +=-lomp
