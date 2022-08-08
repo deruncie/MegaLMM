@@ -131,7 +131,7 @@ estimate_memory_posterior = function(MegaLMM_state,n_iter) {
 #'
 #' @examples
 #' traceplot_array(load_posterior_param(MegaLMM_state,'Lambda'),2,'Lambda')
-traceplot_array = function(sample_array,facet_dim = 2,name = 'param',
+traceplot_array = function(sample_array,facet_dim = 2,name = 'param.pdf',
                            n_per_facet = 5, mask = NULL, include_zero = TRUE) {
   
   if(length(dim(sample_array)) != 3) stop('sample_array is not an array with 3 dimensions. Note: dimension 1 should be the sampleID')
@@ -149,7 +149,8 @@ traceplot_array = function(sample_array,facet_dim = 2,name = 'param',
       sample_array[i,,] = sample_array[i,,] * !mask
     }
   }
-  file = sprintf('%s/traceplot_%s.pdf',MegaLMM_state$run_ID,name)
+  # file = sprintf('%s/traceplot_%s.pdf',MegaLMM_state$run_ID,name)
+  file = name
   tempfile = sprintf('%s.temp',name)
   pdf(tempfile)
   
