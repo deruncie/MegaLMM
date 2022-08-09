@@ -31,7 +31,6 @@ struct R_matrix {
 };
 void load_R_matrices_list(const Rcpp::List X_list, std::vector<R_matrix>& X_vector);
 
-
 // float for MegaBayesC
 using Eigen::MatrixXf;                  // variable size matrix, double precision
 using Eigen::VectorXf;                  // variable size vector, double precision
@@ -69,3 +68,7 @@ static Ziggurat::R::ZigguratR ziggr;
 VectorXd find_candidate_states(MatrixXd, double, int);
 Rcpp::IntegerVector which(Rcpp::LogicalVector x);
 // MatrixXd uncorrelated_prec_mat(VectorXd,VectorXd,VectorXd);
+static int MegaLMM_nthreads = 1;
+
+int get_MegaLMM_nthreads();
+void set_MegaLMM_nthreads(int);

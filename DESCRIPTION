@@ -25,7 +25,8 @@ Imports:
   coda,
   splines,
   MASS,
-  tidyr
+  tidyr,
+  pryr
 Suggests:
   knitr, 
   rmarkdown
@@ -37,3 +38,5 @@ SystemRequirements: GNU make
 RoxygenNote: 7.1.2
 ByteCompile: TRUE
 VignetteBuilder: knitr
+Depends: 
+    R (>= 2.10)
