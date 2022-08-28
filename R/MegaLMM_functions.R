@@ -42,6 +42,7 @@ load_simulation_data = function(file = NULL){
 #'
 `%**%` = function(X1,X2){
   if(is.null(X1)) return(X2)
+  if(is.null(X2)) return(X1)
   result = matrix_multiply_toDense(X1,X2)
   rownames(result) = rownames(X1)
   colnames(result) = colnames(X2)
@@ -336,10 +337,17 @@ calc_functions = function(MegaLMM_state,functions) {
 }
   
 remove_nuisance_parameters = function(MegaLMM_state) {
+  Missing_data_map = MegaLMM_state$run_variables$Missing_data_map
+  RE_L_list = MegaLMM_state$data_matrices$RE_L_list
+  # S_list = MegaLMM_state$run_variables$S_list
   current_state = within(MegaLMM_state$current_state,{
     # re-transform random effects using RE_L (RE_L %*% diag(D) %*% t(RE_L) = bdiag(K_mats))
-    U_R = MegaLMM_state$data_matrices$RE_L %**% U_R
-    U_F = MegaLMM_state$data_matrices$RE_L %**% U_F
+    for(set in seq_along(Missing_data_map)){
+      cols = Missing_data_map[[set]]$Y_cols
+      if(length(cols)) next
+      U_R[,cols] = RE_L_list[[set]] %**% U_R[,cols,drop=FALSE]
+    }
+    U_F = RE_L_list[[1]] %**% U_F
     # transform variables so that the variance of each column of F is 1.
     F_var = 1/tot_F_prec
     U_F[] = sweep(U_F,2,sqrt(F_var),'/')
@@ -355,6 +363,15 @@ remove_nuisance_parameters = function(MegaLMM_state) {
     Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
     Eta[] = sweep(Eta,2,sqrt(var_Eta),'*')
     tot_Eta_prec[] = tot_Eta_prec / var_Eta
+    
+    # add means to Eta/Eta_mean
+    
+    Eta[] = sweep(Eta,2,MegaLMM_state$run_parameters$observation_model_parameters$observation_setup$Mean_Y,'+')
+    if(ncol(Eta_mean) == length(var_Eta)) {
+      Eta_mean[] = sweep(Eta_mean,2,sqrt(var_Eta),'*')
+      Eta_mean[] = sweep(Eta_mean,2,MegaLMM_state$run_parameters$observation_model_parameters$observation_setup$Mean_Y,'+')
+    }
+
   })
   return(current_state)
 }
@@ -450,10 +467,10 @@ reset_Posterior = function(Posterior,MegaLMM_state){
   }
   for(param in Posterior$posteriorMean_params) {
     if(param %in% names(current_state) && length(dim(current_state[[param]])) == 2) {
-      if(Posterior$total_samples == 0) {
+      # if(Posterior$total_samples == 0) {  # I think this is wrong. We always want to set it back to 0.
         Posterior[[param]] = array(0,dim = dim(current_state[[param]]))
         dimnames(Posterior[[param]]) = dimnames(current_state[[param]])
-      }
+      # }
     } else{
       # drop param from Posterior$posteriorMean_params
       Posterior$posteriorMean_params = Posterior$posteriorMean_params[Posterior$posteriorMean_params != param]

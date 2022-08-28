@@ -28,6 +28,7 @@
 missing_data_model = function(observation_model_parameters,MegaLMM_state = list()){
   current_state = MegaLMM_state$current_state
   data_matrices = MegaLMM_state$data_matrices
+  Missing_data_map = MegaLMM_state$run_variables$Missing_data_map
 
   if(!'observation_setup' %in% names(observation_model_parameters)) {
     observation_setup = with(c(observation_model_parameters,data_matrices,current_state),{
@@ -58,7 +59,7 @@ missing_data_model = function(observation_model_parameters,MegaLMM_state = list(
     return(observation_setup)
   }
 
-  observation_model_state = with(c(observation_model_parameters,observation_model_parameters$observation_setup,data_matrices,current_state),{
+  observation_model_state = with(c(observation_model_parameters,observation_model_parameters$observation_setup,data_matrices,Missing_data_map,current_state),{
     Eta_mean = matrix(0,0,0)
     if(n_missing > 0){
       n = nrow(Y)
@@ -67,7 +68,13 @@ missing_data_model = function(observation_model_parameters,MegaLMM_state = list(
         Eta_mean = matrix(0,n,p)
         resids = rnorm(n_missing)
       } else{
-        Eta_mean = XB + F %**% Lambda + ZL %**% U_R
+        Eta_mean = XB + F %**% Lambda
+        for(set in seq_along(Missing_data_map)){
+          cols = Missing_data_map[[set]]$Y_cols
+          rows = Missing_data_map[[set]]$Y_obs
+          if(length(cols) == 0 || length(rows) == 0) next  
+          Eta_mean[,cols] = Eta_mean[,cols] + ZL_list[[set]] %**% U_R[,cols,drop=FALSE]
+        }
         resid_Eta_prec = tot_Eta_prec / (1-colSums(resid_h2))
         resids = rnorm(n_missing,0,sqrt(1/resid_Eta_prec[Y_missing@j+1]))  # sample resids from normal distribution with appropriate variance
       }

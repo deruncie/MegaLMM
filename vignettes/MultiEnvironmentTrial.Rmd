@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 
 This tutorial introduces use to the main functions of the `MegaLMM` R package.
 
-In this tutorial we will use `MegaLMM` to do Genomic Prediction for a set of maize lines in a large multi-environmental trial. Multi-environment trials are used to evaluate candidate varieties under different environments to learn which varieties might be useful for particular locations. This is important because **Gene-Environment Interactions** are very common in plants, which means that the relative performances of varieties may change across different environments, so the same line won't necessarily be best everywhere.
+We will use `MegaLMM` to do Genomic Prediction for a set of maize lines in a large multi-environmental trial. Multi-environment trials are used to evaluate candidate varieties under different environments to learn which varieties might be useful for particular locations. This is important because **Gene-Environment Interactions** are very common in plants, which means that the relative performances of varieties may change across different environments, so the same line won't necessarily be best everywhere.
 
 Gene-environment interactions are often thought of as reaction norms, where we plot the change in a line's performance as a function of the environment. However, an equivalent model for gene-environment interactions is to think of the trait value in each environment as a separate trait, and model the correlation in trait values across environments. As reaction norms, gene-environment interactions are represented by lines with different slopes. As correlated traits, gene-environment interactions are represented by correlations in traits that are less than one.
 

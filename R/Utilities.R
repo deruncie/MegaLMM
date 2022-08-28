@@ -304,6 +304,11 @@ set_Missing_data_map = function(MegaLMM_state,Missing_data_map) {
       Y_obs = which(Y_row_obs_index == i)
     ))
   })
+  
+  # expand ZL_list for missing data map
+  
+  MegaLMM_state$data_matrices$ZL_list = lapply(seq_along(Missing_data_map),function(x) MegaLMM_state$data_matrices$ZL_list[[1]])
+  
 
   MegaLMM_state$run_variables$Missing_row_data_map = Missing_row_data_map
 

@@ -131,7 +131,9 @@ sample_latent_traits = function(MegaLMM_state,...) {
         }
       }
     }
-    Eta_tilde = Eta - XB - F %**% Lambda
+    
+    F_Lambda = F %**% Lambda
+    Eta_tilde = Eta - XB - F_Lambda
 
 
     # ------------------------------------------------------------#
@@ -167,11 +169,14 @@ sample_latent_traits = function(MegaLMM_state,...) {
 
 
       U_R[,cols] = sample_MME_ZKZts_c(Eta_tilde[rows,cols,drop=FALSE],
-                                      ZL[rows,,drop=FALSE],
+                                      ZL_list[[set]][rows,,drop=FALSE],
                                       tot_Eta_prec[cols,drop=FALSE],
                                       chol_ZtZ_Kinv_list_list[[set]],
                                       resid_h2[,cols,drop=FALSE],
                                       resid_h2_index[cols,drop=FALSE])
+      
+      # prepare Eta_tilde for sampling F below
+      Eta_tilde[,cols] = Eta_tilde[,cols] + F_Lambda[,cols] - ZL_list[[set]] %*% U_R[,cols,drop=FALSE] 
     }
 
 
@@ -284,16 +289,16 @@ sample_latent_traits = function(MegaLMM_state,...) {
                                           h2_step_size)
     }
     F_h2[] = h2s_matrix[,F_h2_index,drop=FALSE]
-
-    U_F[] = sample_MME_ZKZts_c(F_tilde[rows,,drop=FALSE], ZL[rows,,drop=FALSE], tot_F_prec, chol_ZtZ_Kinv_list_list[[1]], F_h2, F_h2_index)
+    
+    U_F[] = sample_MME_ZKZts_c(F_tilde[rows,,drop=FALSE], ZL_list[[1]], tot_F_prec, chol_ZtZ_Kinv_list_list[[1]], F_h2, F_h2_index)
 
     resid_Eta_prec = tot_Eta_prec / (1-colSums(resid_h2))
 
     # -----Sample F----------------------- #
     #conditioning on B, U_F,U_R,Lambda, F_h2
-    Eta_tilde = Eta - XB - ZL %**% U_R
+    # Eta_tilde = Eta - XB - ZL_list[[1]] %**% U_R  # This was done above
     F_e_prec = tot_F_prec / (1-colSums(F_h2))
-    prior_mean = ZL %**% U_F + XFBF
+    prior_mean = ZL_list[[1]] %**% U_F + XFBF
 
     for(set in seq_along(Missing_row_data_map)){
       cols = Missing_row_data_map[[set]]$Y_cols

@@ -222,7 +222,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   # creates model matrices, RE_setup, current_state
   # returns MegaLMM_state
 
-  try(dir.create(run_ID,recursive = T),silent=T)
+  try(dir.create(run_ID,recursive = T, showWarnings = FALSE),silent=T)
 
   # ----------------------------- #
   # -------- observation model ---------- #
@@ -412,14 +412,14 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   
   # diagonalize RE_setup[[1]]. If this is the only one, will have RAM advantages. Otherwise, probably neutral.
   # maybe only do if only 1 RE?
-  if(length(RE_setup) == 1 && run_parameters$diagonalize_ZtZ_Kinv) {
-    RE_setup[[1]] = within(RE_setup[[1]],{
-      S = simultaneous_diagonalize(crossprod(ZL),solve(chol(forceSymmetric(K_inv))))$S
-      ZL = ZL %*% S
-      L = L %*% S
-      K = K_inv = as(diag(1,nrow(K)),'dgCMatrix')
-    })
-  }
+  # if(length(RE_setup) == 1 && run_parameters$diagonalize_ZtZ_Kinv) {
+  #   RE_setup[[1]] = within(RE_setup[[1]],{
+  #     S = simultaneous_diagonalize(crossprod(ZL),solve(chol(forceSymmetric(K_inv))))$S
+  #     ZL = ZL %*% S
+  #     L = L %*% S
+  #     K = K_inv = as(diag(1,nrow(K)),'dgCMatrix')
+  #   })
+  # }
   # # diagonalize RE_setup[[1]]
   # if(length(chol_Ki_mats) == 1 && diagonalize_ZtZ_Kinv) {
   #   # print('diagonalize_ZtZ_Kinv not currently implemented')
@@ -529,8 +529,10 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
     X2_R = X2_R,
     Z           = Z,
     ZL          = ZL,
+    ZL_list     = list(ZL),
     RE_setup    = RE_setup,
-    RE_L        = RE_L,  # matrix necessary to back-transform U_F and U_R (RE_L*U_F and RE_L*U_R) to get original random effects
+    # RE_L        = RE_L,  # matrix necessary to back-transform U_F and U_R (RE_L*U_F and RE_L*U_R) to get original random effects
+    RE_L_list     = list(RE_L),  # List of matrices necessary to back-transform U_F and U_R (RE_L*U_F and RE_L*U_R) to get original random effects
     RE_indices  = RE_indices,
     h2s_matrix  = h2s_matrix,
     cis_genotypes = cis_genotypes,
@@ -805,6 +807,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
   # verbose = run_parameters$verbose
 
   RE_setup = data_matrices$RE_setup
+  RE_L_list = data_matrices$RE_L_list
   ZL = data_matrices$ZL
 
   Missing_data_map      = MegaLMM_state$run_variables$Missing_data_map
@@ -859,6 +862,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
   QtX1_list = list()
   QtX2_R_list = list()
   Qt_cis_genotypes = list()
+  ZL_list = list()
 
   chol_V_list_list = list()
   chol_ZtZ_Kinv_list_list = list()
@@ -934,8 +938,19 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
     }
     
-    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL[x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
-    if(length(RE_setup) == 1 & isDiagonal(ZtZ_set) & all(sapply(chol_Ki_mats,isDiagonal))) {
+    ZL_list[[set]] = ZL
+    chol_Ki_mats_set = chol_Ki_mats
+    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
+    if(length(RE_setup) == 1) {
+      S = simultaneous_diagonalize(ZtZ_set,solve(chol_Ki_mats[[1]]))$S
+      S = as(S,'dgCMatrix')
+      ZL_list[[set]] = ZL_list[[set]] %**% S
+      ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
+      RE_L_list[[set]] = RE_L_list[[1]] %*% S
+      chol_Ki_mats_set[[1]] = as(diag(1,nrow(K)),'dgCMatrix')
+    }
+    
+    if(length(RE_setup) == 1 & isDiagonal(ZtZ_set) & all(sapply(chol_Ki_mats_set,isDiagonal))) {
       # in the case of 1 random effect with diagonal covariance matrix, we can skip the expensive calculations
       chol_ZtZ_Kinv_list_list[[set]] = sapply(1:length(h2s_matrix),function(i) {
         nn = nrow(ZtZ_set)
@@ -943,7 +958,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       })
     } else if(set == 1 || sum(priors$h2_priors_resids[-1]) > 0) {
       # Note: set >1 only applies to the resids (factors always use set==1).
-      chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats,h2s_matrix,ZtZ_set,
+      chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats_set,h2s_matrix,ZtZ_set,
                                                                run_parameters$drop0_tol,
                                                                verbose,pb,setTxtProgressBar,getTxtProgressBar,ncores)
     } else{
@@ -971,6 +986,9 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     chol_V_list_list          = chol_V_list_list,
     chol_ZtZ_Kinv_list_list = chol_ZtZ_Kinv_list_list
   ))
+  
+  MegaLMM_state$data_matrices$RE_L_list = RE_L_list
+  MegaLMM_state$data_matrices$ZL_list = ZL_list
 
   return(MegaLMM_state)
 }
