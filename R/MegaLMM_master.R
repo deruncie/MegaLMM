@@ -869,12 +869,13 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
   svd_K1 = NULL
   for(set in seq_along(Missing_data_map)){
+    if(verbose>1) print(sprintf('Set %d',set))
     x = Missing_data_map[[set]]$Y_obs
     cols = Missing_data_map[[set]]$Y_cols
     if(length(x) == 0) next
 
     # find Qt = svd(ZLKLtZt)$u
-    if(ncol(ZL) < nrow(ZL)) {
+    if(ncol(ZL) < nrow(ZL)*.9) {
       # a faster way of taking the SVD of ZLKZLt, particularly if ncol(ZL) < nrow(ZL). Probably no benefit if ncol(K) > nrow(ZL)
       if(is.null(svd_K1)){
         svd_K1 = svd(RE_setup[[1]]$K)
@@ -938,24 +939,33 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
     }
     
+    
+    if(verbose>1) print(sprintf('Set %d S',set))
     ZL_list[[set]] = ZL
     chol_Ki_mats_set = chol_Ki_mats
     ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
     if(length(RE_setup) == 1) {
       S = simultaneous_diagonalize(ZtZ_set,solve(chol_Ki_mats[[1]]))$S
-      S = as(S,'dgCMatrix')
+      if(nnzero(S)/length(S) > 0.5) {
+        S = as.matrix(S)  # only store as sparse if it is sparse
+      } else {
+        S = as(S,'dgCMatrix')
+      }
       ZL_list[[set]] = ZL_list[[set]] %**% S
-      ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
-      RE_L_list[[set]] = RE_L_list[[1]] %*% S
-      chol_Ki_mats_set[[1]] = as(diag(1,nrow(K)),'dgCMatrix')
+      ZtZ_set = Diagonal(ncol(ZL),colSums(ZL_list[[set]][x,]^2))
+      # ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')  # Not needed because must be symmetric
+      RE_L_list[[set]] = RE_L_list[[1]] %**% S
+      chol_Ki_mats_set[[1]] = as(diag(1,nrow(ZtZ_set)),'dgCMatrix')
     }
     
+    if(verbose>1) print(sprintf('Set %d chol_ZtZ_Kinv_list_list',set))
     if(length(RE_setup) == 1 & isDiagonal(ZtZ_set) & all(sapply(chol_Ki_mats_set,isDiagonal))) {
       # in the case of 1 random effect with diagonal covariance matrix, we can skip the expensive calculations
       chol_ZtZ_Kinv_list_list[[set]] = sapply(1:length(h2s_matrix),function(i) {
         nn = nrow(ZtZ_set)
-        sparseMatrix(i=1:nn,j=1:nn,x = sqrt(1/(1-h2s_matrix[1,i])*diag(ZtZ_set) + 1/h2s_matrix[1,i]*diag(chol_Ki_mats[[1]])^2))
+        sparseMatrix(i=1:nn,j=1:nn,x = sqrt(1/(1-h2s_matrix[1,i])*diag(ZtZ_set) + 1/h2s_matrix[1,i]*diag(chol_Ki_mats_set[[1]])^2))
       })
+      if(verbose) setTxtProgressBar(pb,getTxtProgressBar(pb)+length(h2s_matrix))
     } else if(set == 1 || sum(priors$h2_priors_resids[-1]) > 0) {
       # Note: set >1 only applies to the resids (factors always use set==1).
       chol_ZtZ_Kinv_list_list[[set]] = make_chol_ZtZ_Kinv_list(chol_Ki_mats_set,h2s_matrix,ZtZ_set,
@@ -964,6 +974,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     } else{
       # if the prior is concentrated at h2s==0, then we don't need to sample U. All values will be 0.
       chol_ZtZ_Kinv_list_list[[set]] = lapply(seq_along(priors$h2_priors_resids),function(x) matrix(1,0,0))
+      if(verbose) setTxtProgressBar(pb,getTxtProgressBar(pb)+length(h2s_matrix))
     }
   }
   if(verbose) close(pb)

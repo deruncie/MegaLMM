@@ -290,7 +290,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
     }
     F_h2[] = h2s_matrix[,F_h2_index,drop=FALSE]
     
-    U_F[] = sample_MME_ZKZts_c(F_tilde[rows,,drop=FALSE], ZL_list[[1]], tot_F_prec, chol_ZtZ_Kinv_list_list[[1]], F_h2, F_h2_index)
+    U_F[] = sample_MME_ZKZts_c(F_tilde[rows,,drop=FALSE], ZL_list[[1]][rows,,drop=FALSE], tot_F_prec, chol_ZtZ_Kinv_list_list[[1]], F_h2, F_h2_index)
 
     resid_Eta_prec = tot_Eta_prec / (1-colSums(resid_h2))
 
