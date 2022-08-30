@@ -117,23 +117,25 @@ plot_current_state_simulation = function(MegaLMM_state, device = NULL){
   run_parameters = MegaLMM_state$run_parameters
   run_variables = MegaLMM_state$run_variables
 
-  current_state = within(MegaLMM_state$current_state,{
-    U_R = as.matrix(MegaLMM_state$data_matrices$RE_L %*% U_R)
-    U_F = as.matrix(MegaLMM_state$data_matrices$RE_L %*% U_F)
-    # transform variables so that the variance of each column of F is 1.
-    F_var = 1/tot_F_prec
-    U_F = sweep(U_F,2,sqrt(F_var),'/')
-    B2_F = sweep(B2_F,2,sqrt(F_var),'/')
-    F = sweep(F,2,sqrt(F_var),'/')
-    Lambda = sweep(Lambda,1,sqrt(F_var),'*')
-
-    if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
-    U_R[] = sweep(U_R,2,sqrt(var_Eta),'*')
-    B1[] = sweep(B1,2,sqrt(var_Eta),'*')
-    B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
-    Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
-    tot_Eta_prec[] = tot_Eta_prec / var_Eta
-  })
+  
+  # current_state = within(MegaLMM_state$current_state,{
+  #   U_R = as.matrix(MegaLMM_state$data_matrices$RE_L %*% U_R)
+  #   U_F = as.matrix(MegaLMM_state$data_matrices$RE_L %*% U_F)
+  #   # transform variables so that the variance of each column of F is 1.
+  #   F_var = 1/tot_F_prec
+  #   U_F = sweep(U_F,2,sqrt(F_var),'/')
+  #   B2_F = sweep(B2_F,2,sqrt(F_var),'/')
+  #   F = sweep(F,2,sqrt(F_var),'/')
+  #   Lambda = sweep(Lambda,1,sqrt(F_var),'*')
+  # 
+  #   if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
+  #   U_R[] = sweep(U_R,2,sqrt(var_Eta),'*')
+  #   B1[] = sweep(B1,2,sqrt(var_Eta),'*')
+  #   B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
+  #   Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
+  #   tot_Eta_prec[] = tot_Eta_prec / var_Eta
+  # })
+  current_state = remove_nuisance_parameters(MegaLMM_state)
 
   Lambda = current_state$Lambda
   F_h2 = current_state$F_h2
