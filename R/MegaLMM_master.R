@@ -917,7 +917,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       ZL_list[[set]] = ZL_list[[set]] %**% S
       ZtZ_set = Diagonal(ncol(ZL),colSums(ZL_list[[set]][x,]^2))
       # ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')  # Not needed because must be symmetric
-      RE_L_list[[set]] = RE_L_list[[1]] %**% S
+      RE_L_list[[set]] = RE_setup[[1]]$L %**% S
       chol_Ki_mats_set[[1]] = as(diag(1,nrow(ZtZ_set)),'dgCMatrix')
     }
     

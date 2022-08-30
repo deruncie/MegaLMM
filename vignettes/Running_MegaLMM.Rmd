@@ -33,6 +33,7 @@ load('setup.RData')
 Y = setup$Y
 data = setup$data
 K = setup$K
+Y[1:5,1:50]=NA
 ```
 
 ## Set the parameters of the MegaLMM model
@@ -148,7 +149,7 @@ for(i  in 1:5) {
   
   MegaLMM_state = save_posterior_chunk(MegaLMM_state)  # save any accumulated posterior samples in the database to release memory
   print(MegaLMM_state) # print status of current chain
-  plot(MegaLMM_state) # make some diagnostic plots. These are saved in a pdf booklet: diagnostic_plots.pdf
+  plot(MegaLMM_state,setup = setup) # make some diagnostic plots. These are saved in a pdf booklet: diagnostic_plots.pdf
 
   # set of commands to run during burn-in period to help chain converge
   if(MegaLMM_state$current_state$nrun < MegaLMM_state$run_parameters$burn || i < 3) {

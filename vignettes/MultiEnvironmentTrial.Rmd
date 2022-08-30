@@ -517,8 +517,8 @@ for(i in 1:5) {
     # Draw n_iter new samples, storing the chain
   MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)
     # make diagnostic plots
-  traceplot_array(MegaLMM_state$Posterior$Lambda,name = 'Lambda')
-  traceplot_array(MegaLMM_state$Posterior$U,name = 'U',
+  traceplot_array(MegaLMM_state$Posterior$Lambda,name = 'Lambda.pdf')
+  traceplot_array(MegaLMM_state$Posterior$U,name = 'U.pdf',
                   facet_dim = 3,mask = fold_ID_matrix != 1)
   print(sprintf('Completed %d burnin samples', MegaLMM_state$current_state$nrun))
 }

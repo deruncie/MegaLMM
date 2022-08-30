@@ -325,3 +325,34 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+
+static const R_CallMethodDef CallEntries[] = {
+    {"_MegaLMM_LDLt", (DL_FUNC) &_MegaLMM_LDLt, 1},
+    {"_MegaLMM_make_chol_ZtZ_Kinv_list", (DL_FUNC) &_MegaLMM_make_chol_ZtZ_Kinv_list, 9},
+    {"_MegaLMM_make_chol_V_list", (DL_FUNC) &_MegaLMM_make_chol_V_list, 8},
+    {"_MegaLMM_record_sample_Posterior_array", (DL_FUNC) &_MegaLMM_record_sample_Posterior_array, 3},
+    {"_MegaLMM_get_MegaLMM_nthreads", (DL_FUNC) &_MegaLMM_get_MegaLMM_nthreads, 0},
+    {"_MegaLMM_set_MegaLMM_nthreads", (DL_FUNC) &_MegaLMM_set_MegaLMM_nthreads, 1},
+    {"_MegaLMM_get_omp_nthreads", (DL_FUNC) &_MegaLMM_get_omp_nthreads, 0},
+    {"_MegaLMM_set_omp_nthreads", (DL_FUNC) &_MegaLMM_set_omp_nthreads, 1},
+    {"_MegaLMM_matrix_multiply_toDense", (DL_FUNC) &_MegaLMM_matrix_multiply_toDense, 2},
+    {"_MegaLMM_rstdnorm_mat", (DL_FUNC) &_MegaLMM_rstdnorm_mat, 2},
+    {"_MegaLMM_find_candidate_states", (DL_FUNC) &_MegaLMM_find_candidate_states, 3},
+    {"_MegaLMM_regression_sampler_parallel", (DL_FUNC) &_MegaLMM_regression_sampler_parallel, 14},
+    {"_MegaLMM_sample_MME_ZKZts_c", (DL_FUNC) &_MegaLMM_sample_MME_ZKZts_c, 6},
+    {"_MegaLMM_log_p_h2s", (DL_FUNC) &_MegaLMM_log_p_h2s, 4},
+    {"_MegaLMM_sample_h2s", (DL_FUNC) &_MegaLMM_sample_h2s, 1},
+    {"_MegaLMM_sample_h2s_discrete_MH_c", (DL_FUNC) &_MegaLMM_sample_h2s_discrete_MH_c, 7},
+    {"_MegaLMM_sample_factors_scores_c", (DL_FUNC) &_MegaLMM_sample_factors_scores_c, 5},
+    {"_MegaLMM_sample_tau2_delta_c_Eigen_v2", (DL_FUNC) &_MegaLMM_sample_tau2_delta_c_Eigen_v2, 9},
+    {"_MegaLMM_sample_trunc_delta_c_Eigen", (DL_FUNC) &_MegaLMM_sample_trunc_delta_c_Eigen, 8},
+    {"_MegaLMM_sample_MME_single_diagK", (DL_FUNC) &_MegaLMM_sample_MME_single_diagK, 8},
+    {"_MegaLMM_sample_coefs_set_c", (DL_FUNC) &_MegaLMM_sample_coefs_set_c, 3},
+    {"_MegaLMM_get_fitted_set_c", (DL_FUNC) &_MegaLMM_get_fitted_set_c, 2},
+    {NULL, NULL, 0}
+};
+
+RcppExport void R_init_MegaLMM(DllInfo *dll) {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
+}
