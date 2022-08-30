@@ -416,7 +416,7 @@ Because this dataset is small and there is only 1 random effect, the memory requ
 Now we can run these preliminary calculations:
 
 ```{r}
-MegaLMM_state = initialize_MegaLMM(MegaLMM_state)
+MegaLMM_state = initialize_MegaLMM(MegaLMM_state,verbose = T)
 ```
 
 #### Prepare the Posterior database

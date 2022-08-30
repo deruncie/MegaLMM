@@ -838,12 +838,13 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
 
   svd_K1 = NULL
   for(set in seq_along(Missing_data_map)){
+    if(verbose>1) print(sprintf('Set %d',set))
     x = Missing_data_map[[set]]$Y_obs
     cols = Missing_data_map[[set]]$Y_cols
     if(length(x) == 0) next
 
     # find Qt = svd(ZLKLtZt)$u
-    if(ncol(ZL) < nrow(ZL)) {
+    if(ncol(ZL) < nrow(ZL)*.9) {
       # a faster way of taking the SVD of ZLKZLt, particularly if ncol(ZL) < nrow(ZL). Probably no benefit if ncol(K) > nrow(ZL)
       if(is.null(svd_K1)){
         svd_K1 = svd(RE_setup[[1]]$K)

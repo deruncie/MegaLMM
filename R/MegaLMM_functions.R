@@ -333,11 +333,14 @@ remove_nuisance_parameters = function(MegaLMM_state) {
   # S_list = MegaLMM_state$run_variables$S_list
   current_state = within(MegaLMM_state$current_state,{
     # re-transform random effects using RE_L (RE_L %*% diag(D) %*% t(RE_L) = bdiag(K_mats))
+    U_R_new = matrix(0,nrow(RE_L_list[[1]]),ncol(U_R))
     for(set in seq_along(Missing_data_map)){
       cols = Missing_data_map[[set]]$Y_cols
-      if(length(cols)) next
-      U_R[,cols] = RE_L_list[[set]] %**% U_R[,cols,drop=FALSE]
+      if(length(cols) == 0) next
+      U_R_new[,cols] = RE_L_list[[set]] %**% U_R[,cols,drop=FALSE]
     }
+    U_R = U_R_new
+    rm(U_R_new)
     U_F = RE_L_list[[1]] %**% U_F
     # transform variables so that the variance of each column of F is 1.
     F_var = 1/tot_F_prec
