@@ -33,7 +33,6 @@ load('setup.RData')
 Y = setup$Y
 data = setup$data
 K = setup$K
-Y[1:5,1:50]=NA
 ```
 
 ## Set the parameters of the MegaLMM model
@@ -147,10 +146,14 @@ for(i  in 1:5) {
   print(sprintf('Run %d',i))
   MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)  # run MCMC chain n_samples iterations. grainSize is a paramter for parallelization (smaller = more parallelization)
   
+  U = as.matrix(with(setup,U_F %*% Lambda+U_R))
+  plot(diag(cor(U,get_posterior_mean(MegaLMM_state$Posterior$U))))
+  
   MegaLMM_state = save_posterior_chunk(MegaLMM_state)  # save any accumulated posterior samples in the database to release memory
   print(MegaLMM_state) # print status of current chain
   plot(MegaLMM_state,setup = setup) # make some diagnostic plots. These are saved in a pdf booklet: diagnostic_plots.pdf
 
+  
   # set of commands to run during burn-in period to help chain converge
   if(MegaLMM_state$current_state$nrun < MegaLMM_state$run_parameters$burn || i < 3) {
     MegaLMM_state = reorder_factors(MegaLMM_state,drop_cor_threshold = 0.6) # Factor order doesn't "mix" well in the MCMC. We can help it by manually re-ordering from biggest to smallest

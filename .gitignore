@@ -9,3 +9,4 @@ vignettes/MegaLMM_example*
 vignettes/MegaLMM_fold*
 inst/doc
 *_run_01*
+vignettes/*.pdf
