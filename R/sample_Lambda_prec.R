@@ -223,3 +223,91 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
   return(current_state)
 }
 
+sample_Lambda_prec_BayesC_onePi = function(MegaLMM_state,...) {
+  # sampling as described in Supplemental methods, except we multiply columns of Prec_lambda by delta
+  # phi2 = \lambda^2 in methods
+  # the delta sequence controls tau_k. We have tau_1~C+(0,tau_0), and tau_k = tau_1*prod_{l=1}^K(delta^{-1}_l)
+  # delta_l controls the decrease in odds of inclusion of each element for the lth factor relative to the (l-1)th
+  # Note:  Piironen and Vehtari do not include sigma^2 in prior, so I have removed
+  priors         = MegaLMM_state$priors
+  run_variables  = MegaLMM_state$run_variables
+  run_parameters = MegaLMM_state$run_parameters
+  current_state  = MegaLMM_state$current_state
+  
+  current_state = with(c(priors,run_variables,run_parameters),
+                       with(Lambda_prior,{
+                         if(!which_sampler$Y == 4) stop("Y sampler must be 4 for the BayesC Lambda prior")
+                         
+                         if(!exists('delta_iterations_factor')) delta_iterations_factor = 100
+                         if(!exists('fixed_pi')) fixed_pi = NULL
+                         
+                         
+                         delta_1_shape = delta_1$shape
+                         delta_1_rate  = delta_1$rate
+                         delta_2_shape = delta_2$shape
+                         delta_2_rate  = delta_2$rate
+                         
+                         
+                         within(current_state,{
+                           if(Kr == 0) {
+                             Lambda_prec = matrix(0,nrow=Kr,ncol=p)
+                             delta = matrix(1,1,1)
+                             return()
+                           }
+                           
+                           # initialize variables if needed
+                           if(!exists('delta')){
+                             if(verbose) print('initializing Lambda_prec BayesC')
+                             Lambda_prec = matrix(1,Kr,p)
+                             delta = with(priors,matrix(c(rgamma(1,shape = delta_1_shape,rate = delta_1_rate),rgamma(Kr-1,shape = delta_2_shape,rate = delta_2_rate)),nrow=1))
+                             tauh  = matrix(cumprod(delta),nrow=1)
+                             Lambda_pi = matrix(1,Kr,1)
+                             Lambda_delta = matrix(1,Kr,p)
+                             Lambda_beta = matrix(1,Kr,p)
+                             trunc_point_delta = 0
+                             varEffects = 1
+                           } else{
+                             # if(sum(Lambda != 0) == 0) recover()
+                             # nLoci = rowSums(Lambda_delta)
+                             nLoci = sum(Lambda_delta)
+                             if(is.null(fixed_pi)) {
+                               # Lambda_pi = matrix(rbeta(Kr,p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
+                               Lambda_pi = matrix(rbeta(1,Kr*p-nLoci+1,nLoci+1),nrow = Kr,ncol = 1)
+                             } else{
+                               Lambda_pi = matrix(fixed_pi,nrow = Kr, ncol = 1)
+                             }
+                             # print(cbind(Lambda_pi, 1-nLoci/p,rowSums(Lambda == 0)/p))
+                             # print(rowSums(Lambda==0)/p)
+                             
+                             Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
+                             # varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)
+                             varEffects = (sum(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(1,sum(nLoci) + Lambda_df)
+                             
+                             # # -----Sample delta, update tauh------ #
+                             scores = 0.5*rowSums(Lambda2 / varEffects)
+                             # shapes = c(delta_1_shape + 0.5*p*Kr,
+                             #            delta_2_shape + 0.5*p*((Kr-1):1))
+                             shapes = c(delta_1_shape + 0.5*sum(Lambda_delta),
+                                        delta_2_shape + 0.5*(sum(Lambda_delta)-cumsum(rowSums(Lambda_delta)))[-Kr])  # nLoci in all higher-order rows of Lambda
+                             times = delta_iterations_factor
+                             # randg_draws = matrix(rgamma(times*Kr,shape = shapes,rate = 1),nr=times,byrow=T)
+                             # delta[] = sample_delta_c_Eigen( delta,tauh,scores,delta_1_rate,delta_2_rate,randg_draws)
+                             randu_draws = matrix(runif(times*Kr),nr=times)
+                             delta[] = sample_trunc_delta_c_Eigen( delta,tauh,scores,shapes,delta_1_rate,delta_2_rate,randu_draws,trunc_point_delta)
+                             tauh[]  = matrix(cumprod(delta),nrow=1)
+                             rm(list = c('Lambda2','scores'))
+                           }
+                           
+                           Lambda_prec[] = t(tauh)[,rep(1,p),drop=FALSE]/varEffects
+                           # sweep(1/varEffects,1,tauh,'*')
+                           
+                           
+                           # # ----- Calcualte m_eff -------------- #
+                           # kappa = 1/(1+n/(Lambda_prec*Lambda_delta))
+                           # Lambda_m_eff[] = rowSums(1-kappa)
+                           
+                         })
+                       }))
+  return(current_state)
+}
+
