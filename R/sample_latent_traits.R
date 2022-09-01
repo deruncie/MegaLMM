@@ -80,9 +80,23 @@ sample_latent_traits = function(MegaLMM_state,...) {
         if(any(is.na(new_samples$Y_prec))) break
         tot_Eta_prec[cols] = new_samples$Y_prec 
       } else if(which_sampler$Y == 4){
+        current_alpha1s = B1[QtX1_list[[set]]$keepColumns,cols,drop=FALSE]
+        BayesAlphabet_parms = list(
+          alpha = Lambda[!fixed_factors,cols,drop=FALSE],
+          beta = Lambda_beta[,cols,drop=FALSE],
+          pi = matrix(Lambda_pi,nrow = Kr,ncol = length(cols)),
+          delta = Lambda_delta[,cols,drop=FALSE],
+          run_sampler_times = run_sampler_times
+        )
+        if(b2_R > 0) {
+          BayesAlphabet_parms$alpha = rbind(B2_R[,cols,drop=FALSE],Lambda[!fixed_factors,cols,drop=FALSE])
+          BayesAlphabet_parms$beta = rbind(B2_R_beta[,cols,drop=FALSE],Lambda_beta[,cols,drop=FALSE])
+          BayesAlphabet_parms$pi = rbind(matrix(B2_R_pi[cols],b2_R,length(cols),byrow=T),matrix(Lambda_pi,nrow = Kr,ncol = length(cols)))
+          BayesAlphabet_parms$delta = rbind(B2_R_delta[,cols,drop=FALSE],Lambda_delta[,cols,drop=FALSE])
+        }
         new_samples = SingleSite_regression_sampler_parallel(
           Y = Y_set,
-          X1_base = QtX1_list[[set]],
+          X1_base = QtX1_list[[set]]$X1,
           X1_list_ = Qt_cis_genotypes_set,
           X2_ = X_set,
           Vx_ = NULL,
@@ -94,7 +108,9 @@ sample_latent_traits = function(MegaLMM_state,...) {
           prior_prec_alpha2 = rep(priors$cis_effects_prior$prec,sum(cis_effects_index %in% cols)),
           prior_mean_beta = prior_mean[,cols,drop=FALSE],
           prior_prec_beta = prior_prec[,cols,drop=FALSE],
-          NULL,NULL,NULL
+          current_alpha1s_ = current_alpha1s,
+          current_alpha2s_ = NULL,
+          BayesAlphabet_parms = BayesAlphabet_parms
         )
         # extract samples
         
@@ -109,8 +125,12 @@ sample_latent_traits = function(MegaLMM_state,...) {
         # beta -> B2_R and Lambda
         if(b2_R > 0) {
           B2_R[,cols] = new_samples$beta[1:b2_R,]
+          B2_R_beta[,cols] = new_samples$beta[b2_R+Kr+1:b2_R,]
+          B2_R_delta[,cols] = new_samples$beta[2*(b2_R+Kr)+1:b2_R,]
         }
         Lambda[!fixed_factors,cols] = new_samples$beta[b2_R + 1:Kr,]
+        Lambda_beta[,cols] = new_samples$beta[b2_R+Kr+b2_R + 1:Kr,]
+        Lambda_delta[,cols] = new_samples$beta[2*(b2_R+Kr)+b2_R + 1:Kr,]
         
         # Y_prec -> tot_Eta_prec
         if(any(is.na(new_samples$Y_prec))) break
@@ -229,6 +249,14 @@ sample_latent_traits = function(MegaLMM_state,...) {
       # Y_prec -> tot_F_prec
       tot_F_prec[] = new_samples$Y_prec
     } else if(which_sampler$F == 4) {
+      current_alpha1s = matrix(0,0,0)
+      BayesAlphabet_parms = list(
+        alpha = B2_F,
+        beta = B2_F_beta,
+        pi = B2_F_pi[rep(1,b2_F),,drop=FALSE],
+        delta = B2_F_delta,
+        run_sampler_times = run_sampler_times
+      )
       new_samples = SingleSite_regression_sampler_parallel(
         Y = Qt_F,
         X1_base = matrix(0,length(rows),0),
@@ -243,7 +271,9 @@ sample_latent_traits = function(MegaLMM_state,...) {
         prior_prec_alpha2 = rep(0,0),
         prior_mean_beta = prior_mean,
         prior_prec_beta = B2_F_prec,
-        NULL,NULL,NULL
+        current_alpha1s_ = current_alpha1s,
+        current_alpha2s_ = NULL,
+        BayesAlphabet_parms = BayesAlphabet_parms
       )
       
       # extract samples
@@ -255,7 +285,9 @@ sample_latent_traits = function(MegaLMM_state,...) {
       F_tilde = F
       Qt_F_tilde = Qt_F
       if(b2_F > 0) {
-        B2_F = new_samples$beta
+        B2_F = new_samples$beta[1:b2_F,,drop=FALSE]
+        B2_F_beta = new_samples$beta[b2_F+1:b2_F,,drop=FALSE]
+        B2_F_delta = new_samples$beta[2*b2_F+1:b2_F,,drop=FALSE]
         XFBF = X2_F %**% B2_F
         F_tilde = F - XFBF
         if( b2_F > length(rows)) {
