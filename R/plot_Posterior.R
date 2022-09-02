@@ -54,9 +54,9 @@ trace_plot_Lambda = function(Lambda, n_factors = 16, device = NULL,main = 'Lambd
 
   # for(k in 1:min(n_factors,dim(Lambda)[3])){
   for(k in 1:dim(Lambda)[2]){
-    o = order(-abs(colMeans(Lambda[,k,])))
+    o = order(-abs(colMeans(matrix(Lambda[,k,],ncol = dim(Lambda)[3]))))
     o = o[1:min(5,length(o))]
-    traces = Lambda[,k,o]
+    traces = matrix(Lambda[,k,o],ncol = length(o))
     trace_plot(traces,main = sprintf('Factor %d %s',k,main))
     abline(h=0)
   }
