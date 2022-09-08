@@ -381,6 +381,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
               K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
               K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
               L = t(ldl_k$P) %*% ldl_k$L[,large_d]
+              if(is(L,'dgeMatrix')) L = as.matrix(L)
             } else{
               L = as(diag(1,nrow(K)),'dgCMatrix')
               K_inv = as(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')

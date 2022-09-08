@@ -87,18 +87,15 @@ sample_B2_prec_BayesC = function(MegaLMM_state,...) {
                            
                            if(!any(c('B2_R_pi','B2_F_pi') %in% names(current_state))){
                              if(verbose) print('initializing B_prec BayesC')
-                             if(b2_R > 0) {
                                B2_R_pi = matrix(1,1,p)
                                B2_R_delta = matrix(1,b2_R,p)
                                B2_R_beta = matrix(1,b2_R,p)
                                B2_R_prec = matrix(1,b2_R,p)
-                             }
-                             if(b2_F > 0) {
+                               
                                B2_F_pi = matrix(1,1,K)
                                B2_F_delta = matrix(1,b2_F,K)
                                B2_F_beta = matrix(1,b2_F,K)
                                B2_F_prec = matrix(1,b2_F,K)
-                             }
                            } else {    
                              if(b2_R > 0) {
                                nLoci = colSums(B2_R_delta)
