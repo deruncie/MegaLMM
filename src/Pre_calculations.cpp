@@ -33,15 +33,22 @@ List LDLt(SEXP A_) {
     MSpMat A = as<MSpMat>(A_);
     Eigen::SimplicialLDLT<SpMat> ldlt_A;
     ldlt_A.compute(A);
-    MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
-    MatrixXd P = ldlt_A.permutationP() * I;
-    return(List::create(
-        Named("P") = P.sparseView(),
-        Named("L") = ldlt_A.matrixL(),
-        Named("d") = ldlt_A.vectorD()
-    ));
+    if(ldlt_A.info() != Eigen::Success) {
+      // LDLt failed? Try again as a dense matrix
+      MatrixXd Ad = A.toDense();
+      return(LDLt(wrap(Ad)));
+    } else {
+      MatrixXd I = MatrixXd::Identity(ldlt_A.rows(), ldlt_A.rows());
+      MatrixXd P = ldlt_A.permutationP() * I;
+      return(List::create(
+          Named("P") = P.sparseView(),
+          Named("L") = ldlt_A.matrixL(),
+          Named("d") = ldlt_A.vectorD()
+      ));
+    }
   }
 }
+
 
 
 SpMat make_chol_K_inv(const std::vector<R_matrix>& chol_Ki_mats, VectorXd h2s,double tol){
@@ -85,7 +92,8 @@ Rcpp::List make_chol_ZtZ_Kinv_list(Rcpp::List chol_Ki_mats_,
                                    Map<MatrixXd> h2s_matrix,
                                    MSpMat ZtZ,
                                    double drop0_tol,
-                                   bool verbose, SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
+                                   bool verbose,
+                                   SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
                                    int ncores) {
   int s = h2s_matrix.cols();
 
@@ -180,7 +188,7 @@ SpMat make_chol_R(const std::vector<R_matrix>& ZKZts, const VectorXd h2s, const 
 Rcpp::List make_chol_V_list(Rcpp::List ZKZts_,
                             Map<MatrixXd> h2s_matrix,
                             double drop0_tol,
-                            bool verbose, SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
+                            bool verbose,SEXP pb, Function setTxtProgressBar, Function getTxtProgressBar,
                             int ncores) {
   int s = h2s_matrix.cols();
 

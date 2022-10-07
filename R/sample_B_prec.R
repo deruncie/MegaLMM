@@ -11,13 +11,15 @@ sample_B2_prec_horseshoe = function(MegaLMM_state,...) {
 
   current_state = with(c(priors,run_variables,run_parameters),
                        with(B2_prior,{
-
+                         if(b2_R>0 & which_sampler$Y == 4) stop("Y sampler must be 1-3 for the horseshoe B2_R prior")
+                         if(b2_F>0 & which_sampler$F == 4) stop("Y sampler must be 1-3 for the horseshoe B2_F prior")
+                         
                          tau_0 = prop_0/(1-prop_0) * 1/sqrt(n)
 
                          within(current_state,{
 
                            if(!any(c('B2_R_tau2','B2_F_tau2') %in% names(current_state))){
-                             if(verbose) print('initializing B_prec regularized horseshoe')
+                             if(verbose) print('initializing B_prec horseshoe')
                              B2_R_xi = matrix(1/rgamma(p,shape=1/2,rate=1/tau_0^2),nr=1)
                              B2_R_tau2 = matrix(1/rgamma(p,shape = 1/2, rate = 1/B2_R_xi[1,]),nr=1)
                              B2_R_nu = matrix(1/rgamma(b2_R*p,shape = 1/2, rate = 1), nr = b2_R, nc = p)
@@ -58,6 +60,127 @@ sample_B2_prec_horseshoe = function(MegaLMM_state,...) {
 
 
 
+                         })
+                       }))
+  return(current_state)
+}
+
+
+sample_B2_prec_BayesC = function(MegaLMM_state,...) {
+  # sampling as described in Supplemental methods, except we multiply columns of Prec_lambda by delta
+  # phi2 = \lambda^2 in methods
+  # the delta sequence controls tau_k. We have tau_1~C+(0,tau_0), and tau_k = tau_1*prod_{l=1}^K(delta^{-1}_l)
+  # delta_l controls the decrease in odds of inclusion of each element for the lth factor relative to the (l-1)th
+  # Note:  Piironen and Vehtari do not include sigma^2 in prior, so I have removed
+  priors         = MegaLMM_state$priors
+  run_variables  = MegaLMM_state$run_variables
+  run_parameters = MegaLMM_state$run_parameters
+  current_state  = MegaLMM_state$current_state
+  
+  current_state = with(c(priors,run_variables,run_parameters),
+                       with(B2_prior,{
+                         if(b2_R>0 & !which_sampler$Y == 4) stop("Y sampler must be 4 for the BayesC B2_R prior")
+                         if(b2_F>0 & !which_sampler$F == 4) stop("Y sampler must be 4 for the BayesC B2_F prior")
+                         if(!exists('fixed_pi')) fixed_pi = NULL
+                         
+                         within(current_state,{
+                           
+                           if(!any(c('B2_R_pi','B2_F_pi') %in% names(current_state))){
+                             if(verbose) print('initializing B_prec BayesC')
+                               B2_R_pi = matrix(1,1,p)
+                               B2_R_delta = matrix(1,b2_R,p)
+                               B2_R_beta = matrix(1,b2_R,p)
+                               B2_R_prec = matrix(1,b2_R,p)
+                               
+                               B2_F_pi = matrix(1,1,K)
+                               B2_F_delta = matrix(1,b2_F,K)
+                               B2_F_beta = matrix(1,b2_F,K)
+                               B2_F_prec = matrix(1,b2_F,K)
+                           } else {    
+                             if(b2_R > 0) {
+                               nLoci = colSums(B2_R_delta)
+                               if(is.null(fixed_pi)) {
+                                 B2_R_pi = matrix(rbeta(p,b2_R-nLoci+1,nLoci+1),nrow = 1,ncol = p,byrow = TRUE)
+                               } else{
+                                 B2_R_pi = matrix(fixed_pi,nrow = 1,ncol = p)
+                               }
+                               B2_R_prec[] = 1/matrix((colSums(B2_R^2) + B2_R_df*B2_R_scale)/rchisq(p,nLoci+B2_R_df),nrow = b2_R,ncol = p,byrow=TRUE)
+                             }
+                             
+                             if(b2_F > 0) {
+                               nLoci = colSums(B2_F_delta)
+                               if(is.null(fixed_pi)) {
+                                 B2_F_pi = matrix(rbeta(K,b2_F-nLoci+1,nLoci+1),nrow = 1,ncol = K,byrow = TRUE)
+                               } else{
+                                 B2_F_pi = matrix(fixed_pi,nrow = 1,ncol = K)
+                               }
+                               B2_F_prec[] = 1/matrix((colSums(B2_F^2) + B2_F_df*B2_F_scale)/rchisq(K,nLoci+B2_F_df),nrow = b2_F,ncol = K,byrow=TRUE)
+                             }
+                             
+                             rm(list=c('nLoci'))
+                           }
+                         })
+                       }))
+  return(current_state)
+}
+
+
+sample_B2_prec_BayesB = function(MegaLMM_state,...) {
+  # sampling as described in Supplemental methods, except we multiply columns of Prec_lambda by delta
+  # phi2 = \lambda^2 in methods
+  # the delta sequence controls tau_k. We have tau_1~C+(0,tau_0), and tau_k = tau_1*prod_{l=1}^K(delta^{-1}_l)
+  # delta_l controls the decrease in odds of inclusion of each element for the lth factor relative to the (l-1)th
+  # Note:  Piironen and Vehtari do not include sigma^2 in prior, so I have removed
+  priors         = MegaLMM_state$priors
+  run_variables  = MegaLMM_state$run_variables
+  run_parameters = MegaLMM_state$run_parameters
+  current_state  = MegaLMM_state$current_state
+  
+  current_state = with(c(priors,run_variables,run_parameters),
+                       with(B2_prior,{
+                         if(b2_R>0 & !which_sampler$Y == 4) stop("Y sampler must be 4 for the BayesB B2_R prior")
+                         if(b2_F>0 & !which_sampler$F == 4) stop("Y sampler must be 4 for the BayesB B2_F prior")
+                         if(!exists('fixed_pi')) fixed_pi = NULL
+                         
+                         within(current_state,{
+                           
+                           if(!any(c('B2_R_pi','B2_F_pi') %in% names(current_state))){
+                             if(verbose) print('initializing B_prec BayesB')
+                             if(b2_R > 0) {
+                               B2_R_pi = matrix(1,1,p)
+                               B2_R_delta = matrix(1,b2_R,p)
+                               B2_R_beta = matrix(1,b2_R,p)
+                               B2_R_prec = matrix(1,b2_R,p)
+                             }
+                             if(b2_F > 0) {
+                               B2_F_pi = matrix(1,1,K)
+                               B2_F_delta = matrix(1,b2_F,K)
+                               B2_F_beta = matrix(1,b2_F,K)
+                               B2_F_prec = matrix(1,b2_F,K)
+                             }
+                           } else {    
+                             if(b2_R > 0) {
+                               nLoci = colSums(B2_R_delta)
+                               if(is.null(fixed_pi)) {
+                                 B2_R_pi = matrix(rbeta(p,b2_R-nLoci+1,nLoci+1),nrow = 1,ncol = p,byrow = TRUE)
+                               } else{
+                                 B2_R_pi = matrix(fixed_pi,nrow = 1,ncol = p)
+                               }
+                               B2_R_prec[] = 1/((B2_R_beta^2 + B2_R_df*B2_R_scale)/rchisq(b2_R*p,1+B2_R_df))
+                             }
+                             
+                             if(b2_F > 0) {
+                               nLoci = colSums(B2_F_delta)
+                               if(is.null(fixed_pi)) {
+                                 B2_F_pi = matrix(rbeta(K,b2_F-nLoci+1,nLoci+1),nrow = 1,ncol = K,byrow = TRUE)
+                               } else{
+                                 B2_F_pi = matrix(fixed_pi,nrow = 1,ncol = K)
+                               }
+                               B2_F_prec[] = 1/((B2_F_beta^2 + B2_F_df*B2_F_scale)/rchisq(b2_F*K,1+B2_F_df))
+                             }
+                             B2_F = delta*
+                               rm(list=c('nLoci'))
+                           }
                          })
                        }))
   return(current_state)

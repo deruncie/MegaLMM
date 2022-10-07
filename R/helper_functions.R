@@ -19,7 +19,8 @@
 #' @examples
 #' estimate_memory_initialization_MegaLMM(MegaLMM_state)
 estimate_memory_initialization_MegaLMM = function(MegaLMM_state) {
-  object_size = pryr::object_size
+  require(pryr)
+
   print(sprintf('Random effects: %s',paste(names(MegaLMM_state$data_matrices$RE_setup),collapse=', ')))
   print(sprintf('%d groups of traits and %d h2 grid cells',
                 length(MegaLMM_state$run_variables$Missing_data_map),

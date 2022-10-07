@@ -43,41 +43,102 @@ sample_latent_traits = function(MegaLMM_state,...) {
         Qt_cis_genotypes_set = list()
       }
 
-      new_samples = regression_sampler_parallel(
-        Y_set,
-        QtX1_list[[set]]$X1,
-        Qt_cis_genotypes_set,
-        X_set,
-        NULL,
-        resid_h2_index[cols],
-        chol_V_list_list[[set]],
-        tot_Eta_prec[cols],
-        tot_Eta_prec_shape[cols], tot_Eta_prec_rate[cols],
-        matrix(0,nr = sum(QtX1_list[[set]]$keepColumns),ncol = length(cols)),
-        rep(priors$cis_effects_prior$prec,sum(cis_effects_index %in% cols)),
-        prior_mean[,cols,drop=FALSE],
-        prior_prec[,cols,drop=FALSE]
-      )
-      
-      # extract samples
-
-      # alpha1 -> un-shunk rows of B
-      B1[QtX1_list[[set]]$keepColumns,cols] = new_samples$alpha1
-      B1[!QtX1_list[[set]]$keepColumns,cols] = 0
-
-      # alpha2 -> cis_effects
-      if(!is.null(cis_effects_index)) {
-        cis_effects[1,cols %in% cis_effects_index] = new_samples$alpha2
+      if(which_sampler$Y %in% 1:3) {
+        new_samples = regression_sampler_parallel(
+          Y_set,
+          QtX1_list[[set]]$X1,
+          Qt_cis_genotypes_set,
+          X_set,
+          NULL,
+          resid_h2_index[cols],
+          chol_V_list_list[[set]],
+          tot_Eta_prec[cols],
+          tot_Eta_prec_shape[cols], tot_Eta_prec_rate[cols],
+          matrix(0,nr = sum(QtX1_list[[set]]$keepColumns),ncol = length(cols)),
+          rep(priors$cis_effects_prior$prec,sum(cis_effects_index %in% cols)),
+          prior_mean[,cols,drop=FALSE],
+          prior_prec[,cols,drop=FALSE]
+        )
+        
+        # extract samples
+  
+        # alpha1 -> un-shunk rows of B
+        B1[QtX1_list[[set]]$keepColumns,cols] = new_samples$alpha1
+        B1[!QtX1_list[[set]]$keepColumns,cols] = 0
+  
+        # alpha2 -> cis_effects
+        if(!is.null(cis_effects_index)) {
+          cis_effects[1,cols %in% cis_effects_index] = new_samples$alpha2
+        }
+        # beta -> B2_R and Lambda
+        if(b2_R > 0) {
+          B2_R[,cols] = new_samples$beta[1:b2_R,]
+        }
+        Lambda[!fixed_factors,cols] = new_samples$beta[b2_R + 1:Kr,]
+  
+        # Y_prec -> tot_Eta_prec
+        if(any(is.na(new_samples$Y_prec))) break
+        tot_Eta_prec[cols] = new_samples$Y_prec 
+      } else if(which_sampler$Y == 4){
+        current_alpha1s = B1[QtX1_list[[set]]$keepColumns,cols,drop=FALSE]
+        BayesAlphabet_parms = list(
+          alpha = Lambda[!fixed_factors,cols,drop=FALSE],
+          beta = Lambda_beta[,cols,drop=FALSE],
+          pi = matrix(Lambda_pi,nrow = Kr,ncol = length(cols)),
+          delta = Lambda_delta[,cols,drop=FALSE],
+          run_sampler_times = run_sampler_times
+        )
+        if(b2_R > 0) {
+          BayesAlphabet_parms$alpha = rbind(B2_R[,cols,drop=FALSE],Lambda[!fixed_factors,cols,drop=FALSE])
+          BayesAlphabet_parms$beta = rbind(B2_R_beta[,cols,drop=FALSE],Lambda_beta[,cols,drop=FALSE])
+          BayesAlphabet_parms$pi = rbind(matrix(B2_R_pi[cols],b2_R,length(cols),byrow=T),matrix(Lambda_pi,nrow = Kr,ncol = length(cols)))
+          BayesAlphabet_parms$delta = rbind(B2_R_delta[,cols,drop=FALSE],Lambda_delta[,cols,drop=FALSE])
+        }
+        new_samples = SingleSite_regression_sampler_parallel(
+          Y = Y_set,
+          X1_base = QtX1_list[[set]]$X1,
+          X1_list_ = Qt_cis_genotypes_set,
+          X2_ = X_set,
+          Vx_ = NULL,
+          h2s_index = resid_h2_index[cols],
+          chol_V_list_ = chol_V_list_list[[set]],
+          Y_prec = tot_Eta_prec[cols],
+          Y_prec_a0 = tot_Eta_prec_shape[cols], Y_prec_b0 = tot_Eta_prec_rate[cols],
+          prior_prec_alpha1 = matrix(0,nr = sum(QtX1_list[[set]]$keepColumns),ncol = length(cols)),
+          prior_prec_alpha2 = rep(priors$cis_effects_prior$prec,sum(cis_effects_index %in% cols)),
+          prior_mean_beta = prior_mean[,cols,drop=FALSE],
+          prior_prec_beta = prior_prec[,cols,drop=FALSE],
+          current_alpha1s_ = current_alpha1s,
+          current_alpha2s_ = NULL,
+          BayesAlphabet_parms = BayesAlphabet_parms
+        )
+        # extract samples
+        
+        # alpha1 -> un-shunk rows of B
+        B1[QtX1_list[[set]]$keepColumns,cols] = new_samples$alpha1
+        B1[!QtX1_list[[set]]$keepColumns,cols] = 0
+        
+        # alpha2 -> cis_effects
+        if(!is.null(cis_effects_index)) {
+          cis_effects[1,cols %in% cis_effects_index] = new_samples$alpha2
+        }
+        # beta -> B2_R and Lambda
+        if(b2_R > 0) {
+          B2_R[,cols] = new_samples$beta[1:b2_R,]
+          B2_R_beta[,cols] = new_samples$beta[b2_R+Kr+1:b2_R,]
+          B2_R_delta[,cols] = new_samples$beta[2*(b2_R+Kr)+1:b2_R,]
+        }
+        Lambda[!fixed_factors,cols] = new_samples$beta[b2_R + 1:Kr,]
+        Lambda_beta[,cols] = new_samples$beta[b2_R+Kr+b2_R + 1:Kr,]
+        Lambda_delta[,cols] = new_samples$beta[2*(b2_R+Kr)+b2_R + 1:Kr,]
+        
+        # Y_prec -> tot_Eta_prec
+        if(any(is.na(new_samples$Y_prec))) break
+        tot_Eta_prec[cols] = new_samples$Y_prec
+        
+      } else {
+        stop("which_sampler$Y > 4 not implemented")
       }
-      # beta -> B2_R and Lambda
-      if(b2_R > 0) {
-        B2_R[,cols] = new_samples$beta[1:b2_R,]
-      }
-      Lambda[!fixed_factors,cols] = new_samples$beta[b2_R + 1:Kr,]
-
-      # Y_prec -> tot_Eta_prec
-      if(any(is.na(new_samples$Y_prec))) break
-      tot_Eta_prec[cols] = new_samples$Y_prec
     }
 
     XB = X1 %**% B1 + X2_R %**% B2_R
@@ -149,43 +210,99 @@ sample_latent_traits = function(MegaLMM_state,...) {
     prior_mean = matrix(0,b2_F,K)
 
     Qt_F = Qt_list[[1]] %**% F[rows,,drop=FALSE]
-    new_samples = regression_sampler_parallel(
-      Qt_F,
-      matrix(0,length(rows),0),
-      NULL,
-      Qt1_U2_F,
-      V2_F,
-      F_h2_index,
-      chol_V_list_list[[1]],
-      tot_F_prec,
-      tot_F_prec_shape, tot_F_prec_rate,
-      matrix(0,nr = 0,ncol = K),
-      rep(0,0),
-      prior_mean,
-      B2_F_prec
-    )
-
-    # extract samples
-
-    # alpha1 -> NULL
-    # alpha2 -> NULL
-    # beta -> B2_F
-    XFBF = 0
-    F_tilde = F
-    Qt_F_tilde = Qt_F
-    if(b2_F > 0) {
-      B2_F = new_samples$beta
-      XFBF = X2_F %**% B2_F
-      F_tilde = F - XFBF
-      if( b2_F > length(rows)) {
-        Qt_F_tilde = Qt_list[[1]] %**% F_tilde[rows,,drop=FALSE]
-      } else{
-        Qt_F_tilde = Qt_F - Qt1_X2_F %**% B2_F
+    if(which_sampler$F %in% 1:3) {
+      new_samples = regression_sampler_parallel(
+        Qt_F,
+        matrix(0,length(rows),0),
+        NULL,
+        Qt1_U2_F,
+        V2_F,
+        F_h2_index,
+        chol_V_list_list[[1]],
+        tot_F_prec,
+        tot_F_prec_shape, tot_F_prec_rate,
+        matrix(0,nr = 0,ncol = K),
+        rep(0,0),
+        prior_mean,
+        B2_F_prec
+      )
+  
+      # extract samples
+  
+      # alpha1 -> NULL
+      # alpha2 -> NULL
+      # beta -> B2_F
+      XFBF = 0
+      F_tilde = F
+      Qt_F_tilde = Qt_F
+      if(b2_F > 0) {
+        B2_F = new_samples$beta
+        XFBF = X2_F %**% B2_F
+        F_tilde = F - XFBF
+        if( b2_F > length(rows)) {
+          Qt_F_tilde = Qt_list[[1]] %**% F_tilde[rows,,drop=FALSE]
+        } else{
+          Qt_F_tilde = Qt_F - Qt1_X2_F %**% B2_F
+        }
       }
+  
+      # Y_prec -> tot_F_prec
+      tot_F_prec[] = new_samples$Y_prec
+    } else if(which_sampler$F == 4) {
+      current_alpha1s = matrix(0,0,0)
+      BayesAlphabet_parms = list(
+        alpha = B2_F,
+        beta = B2_F_beta,
+        pi = B2_F_pi[rep(1,b2_F),,drop=FALSE],
+        delta = B2_F_delta,
+        run_sampler_times = run_sampler_times
+      )
+      new_samples = SingleSite_regression_sampler_parallel(
+        Y = Qt_F,
+        X1_base = matrix(0,length(rows),0),
+        X1_list_ = NULL,
+        X2_ = Qt1_U2_F,
+        Vx_ = V2_F,
+        h2s_index = F_h2_index,
+        chol_V_list_ = chol_V_list_list[[1]],
+        Y_prec = tot_F_prec,
+        Y_prec_a0 = tot_F_prec_shape, Y_prec_b0 = tot_F_prec_rate,
+        prior_prec_alpha1 = matrix(0,nr = 0,ncol = K),
+        prior_prec_alpha2 = rep(0,0),
+        prior_mean_beta = prior_mean,
+        prior_prec_beta = B2_F_prec,
+        current_alpha1s_ = current_alpha1s,
+        current_alpha2s_ = NULL,
+        BayesAlphabet_parms = BayesAlphabet_parms
+      )
+      
+      # extract samples
+      
+      # alpha1 -> NULL
+      # alpha2 -> NULL
+      # beta -> B2_F
+      XFBF = 0
+      F_tilde = F
+      Qt_F_tilde = Qt_F
+      if(b2_F > 0) {
+        B2_F = new_samples$beta[1:b2_F,,drop=FALSE]
+        B2_F_beta = new_samples$beta[b2_F+1:b2_F,,drop=FALSE]
+        B2_F_delta = new_samples$beta[2*b2_F+1:b2_F,,drop=FALSE]
+        XFBF = X2_F %**% B2_F
+        F_tilde = F - XFBF
+        if( b2_F > length(rows)) {
+          Qt_F_tilde = Qt_list[[1]] %**% F_tilde[rows,,drop=FALSE]
+        } else{
+          Qt_F_tilde = Qt_F - Qt1_X2_F %**% B2_F
+        }
+      }
+      
+      # Y_prec -> tot_F_prec
+      tot_F_prec[] = new_samples$Y_prec
+      
+    } else {
+      stop("which_sampler$F > 4 not implemented")
     }
-
-    # Y_prec -> tot_F_prec
-    tot_F_prec[] = new_samples$Y_prec
 
     if(!length(h2_priors_factors) == ncol(h2s_matrix)) stop('wrong length of h2_priors_factors')
     if(is.null(h2_step_size)) {

@@ -191,14 +191,16 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
     }
   }
 
+  # reorder current state
+  Lambda_params = c('Lambda','Lambda_prec','Lambda_pi','Lambda_beta','Lambda_delta')
+  F_params = c('F','B2_F','U_F','F_h2','tot_F_prec','B2_F_prec','B2_F_pi','B2_F_delta','B2_F_beta')
+  
   reorder_params = c('Lambda','Lambda_prec','Plam',
                      'delta',
                      'F','B2_F','U_F','F_h2','F_e_prec','tot_F_prec', 'B2_F_prec'
   )
-
-  # reorder current state
-  for(param in reorder_params){
-    if(! param %in% names(current_state)) next
+  for(param in Lambda_params) {
+    if(!param %in% names(current_state)) next
     if(ncol(current_state[[param]]) == nrow(Lambda)) {
       current_state[[param]] = current_state[[param]][,factor_order_withFixed,drop=FALSE]
     } else if(nrow(current_state[[param]]) == nrow(Lambda)){
@@ -209,6 +211,11 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
       current_state[[param]] = current_state[[param]][factor_order,,drop=FALSE]
     }
   }
+  for(param in F_params) {
+    if(!param %in% names(current_state)) next
+    current_state[[param]] = current_state[[param]][,factor_order_withFixed,drop=FALSE]
+  }
+
   current_state$delta[1] = 1
   # current_state$delta = matrix(c(current_state$tauh[1],current_state$tauh[-1]/current_state$tauh[-length(current_state$tauh)]),nrow=1)
   MegaLMM_state$current_state = current_state
@@ -221,7 +228,9 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
     # -----Sample B2_prec ------------- #
     MegaLMM_state$current_state = MegaLMM_state$priors$B2_prior$sampler(MegaLMM_state,1)
   }
-
+  
+  # not re-ordering Posterior. Should be cleared anyway.
+  
   # # reorder Posterior
   # Posterior = MegaLMM_state$Posterior
   # 

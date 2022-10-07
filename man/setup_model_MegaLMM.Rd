@@ -15,7 +15,7 @@ setup_model_MegaLMM(
   run_parameters = MegaLMM_control(),
   posteriorSample_params = c("Lambda", "U_F", "F", "delta", "tot_F_prec", "F_h2",
     "tot_Eta_prec", "resid_h2", "B1", "B2_F", "B2_R", "U_R", "cis_effects",
-    "Lambda_m_eff"),
+    "Lambda_m_eff", "Lambda_pi", "B2_R_pi", "B2_F_pi"),
   posteriorMean_params = c(),
   posteriorFunctions = list(),
   run_ID = "MegaLMM_run"

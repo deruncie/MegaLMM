@@ -25,6 +25,7 @@ Imports:
   coda,
   splines,
   MASS,
+  tidyr,
   pryr
 Suggests:
   knitr, 
