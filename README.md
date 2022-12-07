@@ -39,7 +39,7 @@ MvLMMs like this are notoriously difficult to fit. We address this by re-paramte
 
 where `F` is a `n x k` matrix of latent factor traits and `Lambda` is a `k x t` matrix of factor loadings. This is the model actually fit by **MegaLMM**. For full details, please see the accompanying paper.
 
-![Model outline](vignettes/Conceptual_model_v4.png)
+![Model outline](misc/Conceptual_model_v4.png)
 
 **Figure 1** from Runcie et al 2021.
 
