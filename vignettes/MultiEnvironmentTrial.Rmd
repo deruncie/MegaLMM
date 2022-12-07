@@ -39,14 +39,28 @@ We will use the `MegaLMM`, `rrBLUP`, and `ggplot2` packages.
 `rrBLUP` and `ggplot2` can be installed from CRAN if you do not have them already:
 
 ```{r}
+if(!require(rrBLUP)) { install.packages("rrBLUP"); library(rrBLUP) }
+if(!require(ggplot2)) { install.packages("ggplot2"); library(ggplot2) }
+```
+
+
+```{r eval=FALSE, include=FALSE}
 # install.packages('rrBLUP','ggplot2')  # uncomment if needed to install
 library(rrBLUP)
 library(ggplot2)
 ```
 
-`MegaLMM` is installed from github:
+`MegaLMM` is installed from GitHub:
 
 ```{r}
+if(!require(devtools)) { install.packages("devtools"); library(devtools) }
+if(!require(MegaLMM)) { 
+  devtools::install_github('deruncie/MegaLMM')
+  library(MegaLMM) 
+  }
+```
+
+```{r eval=FALSE, include=FALSE}
 # devtools::install_github('deruncie/MegaLMM') # uncomment if needed to install. Install devtools first if needed with install.packages('devtools')
 library(MegaLMM)
 ```

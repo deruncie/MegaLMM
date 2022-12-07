@@ -10,3 +10,5 @@ vignettes/MegaLMM_fold*
 inst/doc
 *_run_01*
 vignettes/*.pdf
+docs
+.DS_Store
