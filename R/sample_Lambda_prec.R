@@ -123,7 +123,7 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                            tauh = cumprod(delta)
                            
                            # sample Lambda_mean
-                           if(ncol(X) > 0) {
+                           if(ncol(X) > 0 && (!exists('fit_X',Lambda_prior) || fit_X)) {
                              Lambda_beta = t(do.call(cbind,lapply(seq_along(which(!fixed_factors)),function(k) {
                                prec_e = tot_Eta_prec[1,]*Lambda_phi[k,]*tauh[k]
                                X_std = sqrt(prec_e)*X
