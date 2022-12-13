@@ -672,10 +672,11 @@ load_posterior_param_old = function(MegaLMM_state,param,chunks=NULL){
 #' @param params list of parameters to load. If NULL, all parameters will be loaded
 #' @return Posterior list, as part of a MegaLMM_state object
 reload_Posterior = function(MegaLMM_state,params = NULL){
+  recover()
   folder = MegaLMM_state$Posterior$folder
   Posterior = readRDS(paste(folder,'Posterior_base.rds',sep='/'))
   MegaLMM_state$Posterior = Posterior
-  if(is.null(params)) params = c(Posterior$posteriorSample_params,Posterior$posteriorMean_params)
+  if(is.null(params)) params = c(Posterior$posteriorSample_params,Posterior$posteriorMean_params,names(Posterior$posteriorFunctions))
   for(param in params){
     Posterior[[param]] = load_posterior_param(MegaLMM_state,param)
     try(dimnames(Posterior[[param]]) <- dimnames(MegaLMM_state$Posterior[[param]]),silent=T)

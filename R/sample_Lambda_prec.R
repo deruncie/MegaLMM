@@ -133,10 +133,6 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                                chol_C = chol(C)
                                backsolve(chol_C,forwardsolve(t(chol_C),crossprod(X_std,lambda_std)) + rnorm(ncol(X)))
                              })))
-                             if(any(is.na(Lambda_beta))) recover()
-                             # print(Lambda_beta[1,1])
-                             # Lambda_beta[-c(1:3),1] = 0
-                             # print(c(Lambda_beta[1,1],coef(lm(Lambda[1,]~0+X[,1]))))
                              Lambda_beta_var = do.call(cbind,
                                                        lapply(unique(X_group),function(i) {
                                                          beta_index = X_group==i
@@ -144,7 +140,6 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                                                                   shape = Lambda_beta_var_shape + 0.5*sum(beta_index),
                                                                   rate = Lambda_beta_var_rate + 0.5*rowSums(Lambda_beta[,beta_index,drop=FALSE]^2)*tauh) #
                                                        }))
-                             Lambda_beta_var
                              Lambda_beta2_std = Lambda_beta^2 / Lambda_beta_var[,X_group,drop=FALSE]
                              Lambda_mean = Lambda_beta %*% t(X)
                            }
