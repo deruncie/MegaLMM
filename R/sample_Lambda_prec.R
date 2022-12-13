@@ -158,7 +158,7 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                            scores = 0.5*rowSums(Lambda2_std*Lambda_phi)
                            shapes = c(delta_1_shape + 0.5*p*Kr,
                                       delta_2_shape + 0.5*p*((Kr-1):1))
-                           if(ncol(X) > 0) {
+                           if(ncol(X) > 0 && (!exists('fit_X',Lambda_prior) || fit_X)) {
                              scores = scores + 0.5 * rowSums(Lambda_beta2_std)
                              shapes = shapes + c(0.5*ncol(X)*Kr,
                                                  0.5*ncol(X)*((Kr-1):1))
