@@ -183,3 +183,11 @@ get_fitted_set_c <- function(model_matrices, coefs) {
     .Call(`_MegaLMM_get_fitted_set_c`, model_matrices, coefs)
 }
 
+parallel_block_regression_sampler <- function(Y, X1, X2, V_, chol_V_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha, prior_mean_beta, prior_prec_beta) {
+    .Call(`_MegaLMM_parallel_block_regression_sampler`, Y, X1, X2, V_, chol_V_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha, prior_mean_beta, prior_prec_beta)
+}
+
+parallel_Single_regression_sampler <- function(Y_, X1_, X2_, V_, chol_V_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha, prior_mean_beta, prior_prec_beta, current_alphas, betas_alpha, betas_beta, betas_pi, betas_delta, run_sampler_times) {
+    .Call(`_MegaLMM_parallel_Single_regression_sampler`, Y_, X1_, X2_, V_, chol_V_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha, prior_mean_beta, prior_prec_beta, current_alphas, betas_alpha, betas_beta, betas_pi, betas_delta, run_sampler_times)
+}
+

@@ -250,7 +250,13 @@ plot_posterior_simulation = function(MegaLMM_state, device = NULL){
   plot_factor_h2s(apply(Posterior$F_h2,c(2,3),mean))
 
   if(dim(setup$B)[1] > 1) {
-    B_mean = apply(Posterior$B1,c(2,3),mean)
+    if(!is.null(dim(Posterior$B1))) {
+      B_mean = get_posterior_mean(MegaLMM_state,B1)
+    } else if(!is.null(dim(Posterior$B2_F))) {
+      B_mean = get_posterior_mean(MegaLMM_state,B2_F %*% Lambda)
+    } else {
+      return()
+    }
     try({plot(c(B_mean),c(setup$B))},silent = TRUE)
     abline(0,1)
     if(!is.null(setup$B_F) & ncol(MegaLMM_state$data_matrices$X2_F) == nrow(setup$B_F)){

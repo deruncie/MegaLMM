@@ -32,6 +32,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
                            # initialize variables if needed
                            if(!'Lambda_tau2' %in% names(current_state)){
                              if(verbose) print('initializing Lambda_prec horseshoe')
+                             Lambda_mean = matrix(0,Kr,p)
                              Lambda_tau2 = matrix(1,1,1)
                              Lambda_xi = matrix(1,1,1)
                              Lambda_phi2 = matrix(1,Kr,p)
@@ -42,7 +43,7 @@ sample_Lambda_prec_horseshoe = function(MegaLMM_state,...) {
                              Lambda_m_eff = matrix(1,Kr,1)
                            }
 
-                           Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
+                           Lambda2 = (Lambda - Lambda_mean)[!fixed_factors,,drop=FALSE]^2
                            Lambda2_std = sweep(Lambda2,2,tot_Eta_prec[1,]/2,'*')
 
                            Lambda_nu[] = matrix(1/rgamma(Kr*p,shape = 1, rate = 1 + 1/Lambda_phi2), nr = Kr, nc = p)
@@ -108,15 +109,48 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
 
                            # initialize variables if needed
                            if(!exists('delta')){
+                             if(!exists('X',Lambda_prior)) X = matrix(0,0,0)
+                             if(!exists('X_group',Lambda_prior)) X_group = rep(1,ncol(X))
+                             Lambda_beta = matrix(0,Kr,ncol(X))
+                             Lambda_beta_var = matrix(1,Kr,length(unique(X_group)))
                              delta = with(priors,matrix(c(rgamma(1,shape = delta_1_shape,rate = delta_1_rate),rgamma(Kr-1,shape = delta_2_shape,rate = delta_2_rate)),ncol=1))
+                             delta[] = pmax(1,delta)
                              tauh  = matrix(cumprod(delta),ncol=1)
                              Lambda_phi = Lambda_prec = matrix(1,Kr,p)
                              trunc_point_delta = 1
                            }
-
-                           Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
-                           Lambda2_std = sweep(Lambda2,2,tot_Eta_prec[1,],'*') #/ 2
+                           
                            tauh = cumprod(delta)
+                           
+                           # sample Lambda_mean
+                           if(ncol(X) > 0) {
+                             Lambda_beta = t(do.call(cbind,lapply(seq_along(which(!fixed_factors)),function(k) {
+                               prec_e = tot_Eta_prec[1,]*Lambda_phi[k,]*tauh[k]
+                               X_std = sqrt(prec_e)*X
+                               lambda_std = sqrt(prec_e)*Lambda[k,]
+                               C = crossprod(X_std)
+                               diag(C) = diag(C) + 1/Lambda_beta_var[k,X_group]*tauh[k]
+                               chol_C = chol(C)
+                               backsolve(chol_C,forwardsolve(t(chol_C),crossprod(X_std,lambda_std)) + rnorm(ncol(X)))
+                             })))
+                             if(any(is.na(Lambda_beta))) recover()
+                             # print(Lambda_beta[1,1])
+                             # Lambda_beta[-c(1:3),1] = 0
+                             # print(c(Lambda_beta[1,1],coef(lm(Lambda[1,]~0+X[,1]))))
+                             Lambda_beta_var = do.call(cbind,
+                                                       lapply(unique(X_group),function(i) {
+                                                         beta_index = X_group==i
+                                                         1/rgamma(Kr,
+                                                                  shape = Lambda_beta_var_shape + 0.5*sum(beta_index),
+                                                                  rate = Lambda_beta_var_rate + 0.5*rowSums(Lambda_beta[,beta_index,drop=FALSE]^2)*tauh) #
+                                                       }))
+                             Lambda_beta_var
+                             Lambda_beta2_std = Lambda_beta^2 / Lambda_beta_var[,X_group,drop=FALSE]
+                             Lambda_mean = Lambda_beta %*% t(X)
+                           }
+                           
+                           Lambda2 = (Lambda - Lambda_mean)[!fixed_factors,,drop=FALSE]^2
+                           Lambda2_std = sweep(Lambda2,2,tot_Eta_prec[1,],'*') #/ 2
 
                            Lambda_phi[] = matrix(rgamma(Kr*p,shape = (Lambda_df + 1)/2,rate = (Lambda_df + sweep(Lambda2_std,1,tauh,'*'))/2),nr = Kr,nc = p)
 
@@ -124,12 +158,20 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                            scores = 0.5*rowSums(Lambda2_std*Lambda_phi)
                            shapes = c(delta_1_shape + 0.5*p*Kr,
                                       delta_2_shape + 0.5*p*((Kr-1):1))
+                           if(ncol(X) > 0) {
+                             scores = scores + 0.5 * rowSums(Lambda_beta2_std)
+                             shapes = shapes + c(0.5*ncol(X)*Kr,
+                                                 0.5*ncol(X)*((Kr-1):1))
+                           }
                            times = delta_iterations_factor
                            # randg_draws = matrix(rgamma(times*Kr,shape = shapes,rate = 1),nr=times,byrow=T)
                            # delta[] = sample_delta_c_Eigen( delta,tauh,scores,delta_1_rate,delta_2_rate,randg_draws)
                            randu_draws = matrix(runif(times*Kr),nr=times)
                            delta[,1] = sample_trunc_delta_c_Eigen( delta,tauh,scores,shapes,delta_1_rate,delta_2_rate,randu_draws,trunc_point_delta)
+                           if(max(delta[,1]) > 1e30) recover()
+                           # delta[,1] = d2
                            tauh[]  = matrix(cumprod(delta),ncol=1)
+                           # print(c(delta))
 
                            Lambda_prec[] = sweep(Lambda_phi,1,tauh,'*')
                        })
@@ -172,6 +214,7 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
                            # initialize variables if needed
                            if(!exists('delta')){
                              if(verbose) print('initializing Lambda_prec BayesC')
+                             Lambda_mean = matrix(0,Kr,p)
                              Lambda_prec = matrix(1,Kr,p)
                              delta = with(priors,matrix(c(rgamma(1,shape = delta_1_shape,rate = delta_1_rate),rgamma(Kr-1,shape = delta_2_shape,rate = delta_2_rate)),nrow=1))
                              tauh  = matrix(cumprod(delta),nrow=1)
@@ -191,7 +234,7 @@ sample_Lambda_prec_BayesC = function(MegaLMM_state,...) {
                              # print(cbind(Lambda_pi, 1-nLoci/p,rowSums(Lambda == 0)/p))
                              # print(rowSums(Lambda==0)/p)
                              
-                             Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
+                             Lambda2 = (Lambda - Lambda_mean)[!fixed_factors,,drop=FALSE]^2
                              # varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)
                              varEffects = (sum(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(1,sum(nLoci) + Lambda_df)
                              
@@ -258,6 +301,7 @@ sample_Lambda_prec_BayesC_onePi = function(MegaLMM_state,...) {
                            # initialize variables if needed
                            if(!exists('delta')){
                              if(verbose) print('initializing Lambda_prec BayesC')
+                             Lambda_mean = matrix(0,Kr,p)
                              Lambda_prec = matrix(1,Kr,p)
                              delta = with(priors,matrix(c(rgamma(1,shape = delta_1_shape,rate = delta_1_rate),rgamma(Kr-1,shape = delta_2_shape,rate = delta_2_rate)),nrow=1))
                              tauh  = matrix(cumprod(delta),nrow=1)
@@ -279,7 +323,7 @@ sample_Lambda_prec_BayesC_onePi = function(MegaLMM_state,...) {
                              # print(cbind(Lambda_pi, 1-nLoci/p,rowSums(Lambda == 0)/p))
                              # print(rowSums(Lambda==0)/p)
                              
-                             Lambda2 = Lambda[!fixed_factors,,drop=FALSE]^2
+                             Lambda2 = (Lambda - Lambda_mean)[!fixed_factors,,drop=FALSE]^2
                              # varEffects = matrix((rowSums(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(Kr,nLoci + Lambda_df),nrow = Kr, ncol = p)
                              varEffects = (sum(sweep(Lambda2,1,tauh,'*')) + Lambda_df*Lambda_scale)/rchisq(1,sum(nLoci) + Lambda_df)
                              

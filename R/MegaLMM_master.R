@@ -278,8 +278,8 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   if(!is.null(extra_regressions)) {
     # project out intercept
     if('X' %in% names(extra_regressions)){
-      M = diag(1,n) - matrix(1/n,n,n)
-      extra_regressions$X = M %*% extra_regressions$X
+      # M = diag(1,n) - matrix(1/n,n,n)
+      # extra_regressions$X = M %*% extra_regressions$X
       extra_regressions$X = extra_regressions$X[,colSums(abs(extra_regressions$X))>1e-10,drop=FALSE]
     } else if('V' %in% names(extra_regressions)){
       m = nrow(extra_regressions$V)
@@ -662,6 +662,7 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
     Lambda = matrix(rnorm(K*p,0,sqrt(1/Lambda_prec)),nr = K,nc = p)
     colnames(Lambda) = traitnames
     Lambda[fixed_factors,] = Lambda_fixed
+    Lambda_mean = matrix(0,Kr,p)
 
     # residuals
     # p-vector of factor precisions. Note - this is a 'redundant' parameter designed to give the Gibbs sampler more flexibility
@@ -726,6 +727,7 @@ initialize_variables_MegaLMM = function(MegaLMM_state,...){
     current_state = list(
       K              = K,
       Lambda         = Lambda,
+      Lambda_mean    = Lambda_mean,
       tot_F_prec     = tot_F_prec,
       F_h2_index     = F_h2_index,
       F_h2           = F_h2,
@@ -906,7 +908,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     # QtZL_set = do.call(cbind,QtZL_matrices_set[RE_names])
     # if(nnzero(QtZL_set)/length(QtZL_set) > 0.5)  QtZL_set = as(QtZL_set,'dgCMatrix')
     QtX1_set = Qt %**% X1[x,,drop=FALSE]
-    QtX1_keepColumns = c(1:ncol(X1)) %in% caret::findLinearCombos(QtX1_set)$remove == F # assess which columns of X1 are identifiable in this data set
+    QtX1_keepColumns = logical(0)
+    if(ncol(X1)>0)  QtX1_keepColumns = c(1:ncol(X1)) %in% caret::findLinearCombos(QtX1_set)$remove == F # assess which columns of X1 are identifiable in this data set
     QtX1_set = QtX1_set[,QtX1_keepColumns,drop=FALSE]  # drop extra columns
 
     QtX2_R_set = Qt %**% X2_R[x,,drop=FALSE]

@@ -47,7 +47,7 @@ make_model_setup = function(formula,data,relmat = NULL) {
   while(response %in% all.vars(formula)){
     response = paste0(response,response)
   }
-  formula = update(formula,sprintf('%s~.',response))
+  formula = sprintf('%s~%s',response,as.character(formula)[2])
   data[[response]] = 1
   lmod <- lme4::lFormula(formula,data=data,#weights=weights,
                          control = lme4::lmerControl(check.nobs.vs.nlev = 'ignore',check.nobs.vs.nRE = 'ignore'))

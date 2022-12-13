@@ -72,3 +72,24 @@ static int MegaLMM_nthreads = 1;
 
 int get_MegaLMM_nthreads();
 void set_MegaLMM_nthreads(int);
+
+
+
+struct RMatrix {
+  Map<MatrixXd> dense;
+  MSpMat sparse;
+  bool triangular;
+  bool isDense;
+  bool isNULL = false;
+  RMatrix(Map<MatrixXd> dense_, MSpMat sparse_,bool triangular_, bool isDense_,bool isNULL_) : dense(dense_), sparse(sparse_), triangular(triangular_), isDense(isDense_), isNULL(isNULL_){}
+  MatrixXd solve(MatrixXd) const;
+  // RMatrix solve(RMatrix) const;
+  MatrixXd tsolve(MatrixXd) const;
+  MatrixXd operator*(MatrixXd) const;
+  MatrixXd crossprod(MatrixXd) const;
+  float get_log_det();
+  int rows() const;
+  int cols() const;
+};
+RMatrix load_RMatrix(const SEXP, bool);
+

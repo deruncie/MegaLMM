@@ -192,13 +192,13 @@ reorder_factors = function(MegaLMM_state,factor_order = NULL, drop_cor_threshold
   }
 
   # reorder current state
-  Lambda_params = c('Lambda','Lambda_prec','Lambda_pi','Lambda_beta','Lambda_delta')
+  Lambda_params = c('Lambda','Lambda_prec','Lambda_pi','Lambda_beta','Lambda_delta','Lambda_mean','Lambda_beta','Lambda_beta_var')
   F_params = c('F','B2_F','U_F','F_h2','tot_F_prec','B2_F_prec','B2_F_pi','B2_F_delta','B2_F_beta')
   
-  reorder_params = c('Lambda','Lambda_prec','Plam',
-                     'delta',
-                     'F','B2_F','U_F','F_h2','F_e_prec','tot_F_prec', 'B2_F_prec'
-  )
+  # reorder_params = c('Lambda','Lambda_mean','Lambda_prec','Plam',
+  #                    'delta',
+  #                    'F','B2_F','U_F','F_h2','F_e_prec','tot_F_prec', 'B2_F_prec'
+  # )
   for(param in Lambda_params) {
     if(!param %in% names(current_state)) next
     if(ncol(current_state[[param]]) == nrow(Lambda)) {

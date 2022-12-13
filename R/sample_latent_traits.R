@@ -18,10 +18,11 @@ sample_latent_traits = function(MegaLMM_state,...) {
     # do sampling in groups of columns with same patterns of missing data
 
     n_coefs = b2_R + Kr
-    prior_mean = matrix(0,n_coefs,p)
     if(b2_R > 0) {
+      prior_mean = rbind(matrix(0,b2_R,p),Lambda_mean)
       prior_prec = rbind(B2_R_prec,Lambda_prec)
     } else{ # b == 0
+      prior_mean = Lambda_mean
       prior_prec = Lambda_prec
     }
 
@@ -29,7 +30,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
     ## I think the following lines are needed and were missing
     Eta_resid = Eta
     if(any(fixed_factors)) Eta_resid = Eta_resid - F[,fixed_factors,drop=FALSE] %*% Lambda[fixed_factors,,drop=FALSE]
-    
+
     for(set in seq_along(Missing_data_map)){
       cols = Missing_data_map[[set]]$Y_cols
       rows = Missing_data_map[[set]]$Y_obs
@@ -43,7 +44,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
         Qt_cis_genotypes_set = list()
       }
 
-      if(which_sampler$Y %in% 1:3) {
+      if(which_sampler$Y == 1) {
         new_samples = regression_sampler_parallel(
           Y_set,
           QtX1_list[[set]]$X1,
@@ -59,13 +60,12 @@ sample_latent_traits = function(MegaLMM_state,...) {
           prior_mean[,cols,drop=FALSE],
           prior_prec[,cols,drop=FALSE]
         )
-        
         # extract samples
-  
+        
         # alpha1 -> un-shunk rows of B
         B1[QtX1_list[[set]]$keepColumns,cols] = new_samples$alpha1
         B1[!QtX1_list[[set]]$keepColumns,cols] = 0
-  
+        
         # alpha2 -> cis_effects
         if(!is.null(cis_effects_index)) {
           cis_effects[1,cols %in% cis_effects_index] = new_samples$alpha2
@@ -74,11 +74,79 @@ sample_latent_traits = function(MegaLMM_state,...) {
         if(b2_R > 0) {
           B2_R[,cols] = new_samples$beta[1:b2_R,]
         }
-        Lambda[!fixed_factors,cols] = new_samples$beta[b2_R + 1:Kr,]
-  
+        Lambda[!fixed_factors,cols] = new_samples$beta[b2_R + 1:Kr,]# + Lambda_mean[,cols]
+        
         # Y_prec -> tot_Eta_prec
         if(any(is.na(new_samples$Y_prec))) break
         tot_Eta_prec[cols] = new_samples$Y_prec 
+      } else if(which_sampler$Y == 2) {
+        unique_h2s = unique(resid_h2_index[cols])
+        for(h2_i in unique_h2s) {
+          cols_i = cols[resid_h2_index[cols] == h2_i]
+          new_samples = parallel_block_regression_sampler(
+            Y_set[,resid_h2_index[cols] == h2_i,drop=FALSE],
+            QtX1_list[[set]]$X1,
+            X_set,
+            NULL,
+            chol_V_list_list[[set]][[resid_h2_index[cols_i][1]]],
+            tot_Eta_prec[cols_i],
+            tot_Eta_prec_shape[cols_i], tot_Eta_prec_rate[cols_i],
+            matrix(0,nr = sum(QtX1_list[[set]]$keepColumns),ncol = sum(cols_i)),
+            prior_mean[,cols_i,drop=FALSE],
+            prior_prec[,cols_i,drop=FALSE]
+          )
+          # alpha1 -> un-shunk rows of B
+          B1[QtX1_list[[set]]$keepColumns,cols_i] = new_samples$alpha
+          B1[!QtX1_list[[set]]$keepColumns,cols_i] = 0
+          
+          # beta -> B2_R and Lambda
+          if(b2_R > 0) {
+            B2_R[,cols_i] = new_samples$beta[1:b2_R,]
+          }
+          Lambda[!fixed_factors,cols_i] = new_samples$beta[b2_R + 1:Kr,]
+          
+          # Y_prec -> tot_Eta_prec
+          if(any(is.na(new_samples$Y_prec))) break
+          tot_Eta_prec[cols_i] = new_samples$Y_prec 
+        }
+      } else if(which_sampler$Y == 3) {
+        unique_h2s = unique(resid_h2_index[cols])
+        for(h2_i in unique_h2s) {
+          cols_i = cols[resid_h2_index[cols] == h2_i]
+          new_samples = parallel_Single_regression_sampler(
+            Y_set[,resid_h2_index[cols] == h2_i,drop=FALSE],
+            QtX1_list[[set]]$X1,
+            X_set,
+            NULL,
+            chol_V_list_list[[set]][[resid_h2_index[cols_i][1]]],
+            tot_Eta_prec[cols_i],
+            tot_Eta_prec_shape[cols_i], tot_Eta_prec_rate[cols_i],
+            matrix(0,nr = sum(QtX1_list[[set]]$keepColumns),ncol = length(cols_i)),
+            prior_mean[,cols_i,drop=FALSE],
+            prior_prec[,cols_i,drop=FALSE],
+            B1[QtX1_list[[set]]$keepColumns,cols_i,drop=FALSE],
+            Lambda[!fixed_factors,cols_i,drop=FALSE],
+            Lambda[!fixed_factors,cols_i,drop=FALSE],
+            matrix(0,sum(!fixed_factors),length(cols_i)),
+            matrix(1,sum(!fixed_factors),length(cols_i)),
+            1
+          )
+          if(sum(is.na(unlist(new_samples)))>0) recover()
+
+          # alpha1 -> un-shunk rows of B
+          B1[QtX1_list[[set]]$keepColumns,cols_i] = new_samples$alpha
+          B1[!QtX1_list[[set]]$keepColumns,cols_i] = 0
+
+          # beta -> B2_R and Lambda
+          if(b2_R > 0) {
+            B2_R[,cols_i] = new_samples$betas_beta[1:b2_R,]
+          }
+          Lambda[!fixed_factors,cols_i] = new_samples$betas_beta[b2_R + 1:Kr,]
+
+          # Y_prec -> tot_Eta_prec
+          if(any(is.na(new_samples$Y_prec))) break
+          tot_Eta_prec[cols_i] = new_samples$Y_prec
+        }
       } else if(which_sampler$Y == 4){
         current_alpha1s = B1[QtX1_list[[set]]$keepColumns,cols,drop=FALSE]
         BayesAlphabet_parms = list(
@@ -346,9 +414,27 @@ sample_latent_traits = function(MegaLMM_state,...) {
         F[rows,] = prior_mean[rows,,drop=FALSE] + sweep(rstdnorm_mat(length(rows),K),2,sqrt(F_e_prec[1,]),'/')
       }
     }
+    
+    # optional - rescale F to unit variance. Not "right" because this is not a parameter. But might help?
+    # if(exists('forceF_var1') & forceF_var1) {
+    #   var_F = apply(F,2,var)
+    #   # print(var_F)
+    #   if(min(var_F) < 1e-10) recover()
+    #   F = sweep(F,2,sqrt(var_F),'/')
+    #   B2_F = sweep(B2_F,2,sqrt(var_F),'/')
+    #   U_F = sweep(U_F,2,sqrt(var_F),'/')
+    #   F_e_prec = F_e_prec / var_F
+    #   # Lambda = sweep(Lambda,1,sqrt(var_F),'*')
+    #   # Lambda_beta = sweep(Lambda_beta,1,sqrt(var_F),'*')
+    #   # Lambda_beta_var = sweep(Lambda_beta_var,1,var_F,'*')
+    #   # Lambda_mean = sweep(Lambda_mean,1,sqrt(var_F),'*')
+    #   # delta = delta/var_F
+    #   # tauh[] = cumprod(delta)
+    # }
 
   }))
   current_state = current_state[current_state_names]
+  # if(any(lapply(current_state,function(x) sum(is.na(x))>0))) recover()
 
   return(current_state)
 }

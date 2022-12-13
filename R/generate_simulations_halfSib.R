@@ -105,7 +105,7 @@ family_simulation = function(name = 'simulation_1', family_sizes,within_group_co
   # save(setup,file='setup.RData')
 }
 
-new_halfSib_simulation = function(name, nSire,nRep,p, b, factor_h2s, Va = 0.2, Ve = 0.2,Vb = 0, numeff = NULL){
+new_halfSib_simulation = function(name, nSire,nRep,p, b, factor_h2s, lambda_b, Va = 0.2, Ve = 0.2,Vb = 0, numeff = NULL){
   nTot = mean(nRep) * nSire
   nRep = rep(nRep,nSire/length(nRep))
   Sire = as.factor(do.call(c,lapply(1:nSire,function(x) rep(x,nRep[x]))))
@@ -141,6 +141,20 @@ new_halfSib_simulation = function(name, nSire,nRep,p, b, factor_h2s, Va = 0.2, V
   g_cols = factor_h2s>0
   if(sum(g_cols) == 0) g_cols = 1:k
   Lambda = Lambda[,do.call("order", unname(split(-abs(Lambda[cols[g_cols],,drop=FALSE]), row(Lambda[cols[g_cols],,drop=FALSE])))),drop=FALSE]
+  
+  if(!is.null(lambda_b) & k > 2) {
+    Lambda_X = cbind(1,rstdnorm_mat(p,lambda_b),cbind(model.matrix(~0+gl(10,p/10)[1:p])))
+    Lambda_beta = cbind(c(1,rep(0,ncol(Lambda_X)-1)),
+                        c(0,1,rep(0,ncol(Lambda_X)-2)),
+                        c(0,0,rnorm(ncol(Lambda_X)-2)),
+                        c(0,0,rnorm(ncol(Lambda_X)-2))
+    )
+    Lambda[1:ncol(Lambda_beta),] = Lambda[1:ncol(Lambda_beta),] + t(Lambda_X %*% Lambda_beta)
+    Lambda_groups = c(1,2,rep(3,ncol(Lambda_X)-2))
+    # Lambda_X[,1] = sort(Lambda_X[,1])
+    # Lambda_beta = rbind(c(1,0,0),rstdnorm_mat(lambda_b-1,3))
+    # Lambda[1:3,] = Lambda[1:3,] + t(Lambda_X %*% Lambda_beta)
+  }
 
   # resid variances
   # tot_Y_prec = rep(0.5,p)
@@ -199,6 +213,9 @@ new_halfSib_simulation = function(name, nSire,nRep,p, b, factor_h2s, Va = 0.2, V
     X_F = X_F,
     U_F = U_F,
     U_R = U_R,
+    Lambda_X = Lambda_X,
+    Lambda_beta = Lambda_beta,
+    Lambda_groups = Lambda_groups,
     F = F,
     # E_F = E_F,
     # E_R = E_R,

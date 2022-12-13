@@ -186,8 +186,7 @@ VectorXd regression_sampler_v1(  // returns vector of length 1 + a + b for y_pre
     const MatrixXd& X1,           // nxa
     const MatrixXd& RinvtX2,                // nxb
     const MatrixXd& C,                     // bxb
-    const VectorXd& prior_prec_alpha, // ax 1
-    const Ref<const VectorXd>& prior_mean_beta,  // bx1
+    const VectorXd& prior_prec_alpha, // ax 1    const Ref<const VectorXd>& prior_mean_beta,  // bx1   NOTE: this is not implemented correctly! Do not use. Subtract X2*prior_mean from y first, then add back in!
     const Ref<const VectorXd>& prior_prec_beta,  // bx1
     const R_matrix& chol_V,                    // either a upper-triangular matrix or upper-triangular CsparseMatrix. Also called R here with RtR = V
     double Y_prec,                    // double
@@ -205,7 +204,8 @@ VectorXd regression_sampler_v1(  // returns vector of length 1 + a + b for y_pre
   if(RinvtX2.rows() != n) stop("Wrong dimension of X2");
   if(C.rows() != b || C.cols() != b) stop("Wrong dimension of C");
   if(prior_prec_alpha.size() != a) stop("Wrong length of prior_prec_alpha");
-  if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
+  // if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
+  // if(prior_mean_beta.maxCoeff() > 0) stop("non-zero prior mean is not implemented correctly!");
   if(prior_prec_beta.size() != b) stop("Wrong length of prior_prec_beta");
   if(randn_alpha.size() != a) stop("Wrong length of randn_alpha");
   if(randn_beta.size() != b) stop("Wrong length of randn_beta");
@@ -222,6 +222,7 @@ VectorXd regression_sampler_v1(  // returns vector of length 1 + a + b for y_pre
   // Step 1
   VectorXd alpha(a);
   VectorXd y_tilde = y;
+  
   if(a > 0) {
     // Sample alpha
     // Calculate A_alpha = Y_prec*X1^T*V_beta^{-1}*X1 + D_alpha^{-1}
@@ -259,7 +260,7 @@ VectorXd regression_sampler_v1(  // returns vector of length 1 + a + b for y_pre
   Y_prec = rgamma_1/score;
   
   // Step 3 - sample beta
-  VectorXd XtRinvy_std_mu = XtRinvy*Y_prec + prior_prec_beta.asDiagonal()*prior_mean_beta;
+  VectorXd XtRinvy_std_mu = XtRinvy*Y_prec; // + prior_prec_beta.asDiagonal()*prior_mean_beta;
   VectorXd beta = chol_A_beta.transpose().triangularView<Lower>().solve(XtRinvy_std_mu) / sqrt(Y_prec) + randn_beta;
   beta = chol_A_beta.triangularView<Upper>().solve(beta) / sqrt(Y_prec);
   
@@ -274,8 +275,7 @@ VectorXd regression_sampler_v2(  // returns vector of length 1 + a + b for y_pre
     const Ref<const VectorXd>& y,           // nx1
     const MatrixXd& X1,           // nxa
     const MatrixXd& X2,           // nxm or nxb
-    const VectorXd& prior_prec_alpha, // ax 1
-    const Ref<const VectorXd>& prior_mean_beta,  // bx1
+    const VectorXd& prior_prec_alpha, // ax 1    const Ref<const VectorXd>& prior_mean_beta,  // bx1
     const Ref<const VectorXd>& prior_prec_beta,  // bx1
     const R_matrix& chol_V,                    // either a upper-triangular matrix or upper-triangular CsparseMatrix
     const MatrixXd& V,
@@ -294,7 +294,7 @@ VectorXd regression_sampler_v2(  // returns vector of length 1 + a + b for y_pre
   if(X1.rows() != n) stop("Wrong dimension of X1");
   if(X2.rows() != n) stop("Wrong dimension of X2");
   if(prior_prec_alpha.size() != a) stop("Wrong length of prior_prec_alpha");
-  if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
+  // if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
   if(prior_prec_beta.size() != b) stop("Wrong length of prior_prec_beta");
   if(randn_alpha.size() != a) stop("Wrong length of randn_alpha");
   if(randn_beta.size() != b) stop("Wrong length of randn_beta");
@@ -331,7 +331,7 @@ VectorXd regression_sampler_v2(  // returns vector of length 1 + a + b for y_pre
   
   // Step 3 - sample beta
   // what about prior mean?
-  VectorXd u = randn_beta.array() / (prior_prec_beta * Y_prec).cwiseSqrt().array() + prior_mean_beta.array();
+  VectorXd u = randn_beta.array() / (prior_prec_beta * Y_prec).cwiseSqrt().array(); // + prior_mean_beta.array();
   VectorXd v = sqrt(Y_prec) * X2 * u;
   if(chol_V.isDense) {
     v += chol_V.dense.transpose().triangularView<Lower>() * randn_e;
@@ -353,8 +353,7 @@ VectorXd regression_sampler_v3(  // returns vector of length 1 + a + b for y_pre
     const MatrixXd& X1,           // nxa
     const MatrixXd& Ux,           // nxm or nxb
     const MatrixXd& Vx,           // mxb
-    const VectorXd& prior_prec_alpha, // ax 1
-    const Ref<const VectorXd>& prior_mean_beta,  // bx1
+    const VectorXd& prior_prec_alpha, // ax 1    const Ref<const VectorXd>& prior_mean_beta,  // bx1
     const Ref<const VectorXd>& prior_prec_beta,  // bx1
     const R_matrix& chol_V,                    // either a upper-triangular matrix or upper-triangular CsparseMatrix
     const MatrixXd& Vinv,
@@ -377,7 +376,7 @@ VectorXd regression_sampler_v3(  // returns vector of length 1 + a + b for y_pre
   if(X1.rows() != n) stop("Wrong dimension of X1");
   if(X2.rows() != n) stop("Wrong dimension of X2");
   if(prior_prec_alpha.size() != a) stop("Wrong length of prior_prec_alpha");
-  if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
+  // if(prior_mean_beta.size() != b) stop("Wrong length of prior_mean_beta");
   if(prior_prec_beta.size() != b) stop("Wrong length of prior_prec_beta");
   if(randn_alpha.size() != a) stop("Wrong length of randn_alpha");
   if(randn_beta.size() != b) stop("Wrong length of randn_beta");
@@ -431,7 +430,7 @@ VectorXd regression_sampler_v3(  // returns vector of length 1 + a + b for y_pre
   
   // Step 3 - sample beta
   // what about prior mean?
-  VectorXd u = randn_beta.array() / (prior_prec_beta * Y_prec).cwiseSqrt().array() + prior_mean_beta.array();
+  VectorXd u = randn_beta.array() / (prior_prec_beta * Y_prec).cwiseSqrt().array(); // + prior_mean_beta.array();
   VectorXd v = std::sqrt(Y_prec) * X2 * u;
   if(chol_V.isDense) {
     v += chol_V.dense.transpose().triangularView<Lower>() * randn_e;
@@ -581,6 +580,9 @@ Rcpp::List regression_sampler_parallel(
   }
   MatrixXd beta(b,p);
   
+  // Subtract off prior_mean_beta so it can be added back. 
+  Y -= X2 * prior_mean_beta;
+  
   // go through h2s indices and sample columns with same index as a set
   for(int i = min(h2s_index); i <= max(h2s_index); i++) {
     int h2_index = i;
@@ -658,17 +660,17 @@ Rcpp::List regression_sampler_parallel(
         VectorXd samples;
         if(which_sampler == 1) {
           b = RinvtX2.cols();
-          samples = regression_sampler_v1(Y.col(j), X1, RinvtX2, C, prior_prec_alpha, prior_mean_beta.col(j),
+          samples = regression_sampler_v1(Y.col(j), X1, RinvtX2, C, prior_prec_alpha, //prior_mean_beta.col(j),
                                            prior_prec_beta.col(j), chol_V, Y_prec[j], randn_alpha,
                                            randn_beta.col(j), rgamma_1[j],Y_prec_b0[j]);
         } else if(which_sampler == 2) {
           b = X2.cols();
-          samples = regression_sampler_v2(Y.col(j), X1, X2, prior_prec_alpha, prior_mean_beta.col(j),
+          samples = regression_sampler_v2(Y.col(j), X1, X2, prior_prec_alpha, //prior_mean_beta.col(j),
                                            prior_prec_beta.col(j), chol_V, V, Y_prec[j], randn_alpha,
                                            randn_beta.col(j), randn_e.col(j),rgamma_1[j],Y_prec_b0[j]);
         } else if(which_sampler == 3) {
           b = Vx.cols();
-          samples = regression_sampler_v3(Y.col(j), X1, Ux, Vx, prior_prec_alpha, prior_mean_beta.col(j),
+          samples = regression_sampler_v3(Y.col(j), X1, Ux, Vx, prior_prec_alpha, //prior_mean_beta.col(j),
                                            prior_prec_beta.col(j), chol_V, Vinv, VinvUx, UtVinvU, Y_prec[j], randn_alpha,
                                            randn_beta.col(j), randn_e.col(j),rgamma_1[j],Y_prec_b0[j]);
           
@@ -680,7 +682,7 @@ Rcpp::List regression_sampler_parallel(
         Y_prec[j] = samples[0];
         if(a1 > 0) alpha1.col(j) = samples.segment(1,a1);
         if(a2 > 0) alpha2[j] = samples.segment(1+a1,a2);
-        if(b > 0) beta.col(j) = samples.tail(b);
+        if(b > 0) beta.col(j) = samples.tail(b) + prior_mean_beta.col(j);
       }
     }
   }
