@@ -672,7 +672,6 @@ load_posterior_param_old = function(MegaLMM_state,param,chunks=NULL){
 #' @param params list of parameters to load. If NULL, all parameters will be loaded
 #' @return Posterior list, as part of a MegaLMM_state object
 reload_Posterior = function(MegaLMM_state,params = NULL){
-  recover()
   folder = MegaLMM_state$Posterior$folder
   Posterior = readRDS(paste(folder,'Posterior_base.rds',sep='/'))
   MegaLMM_state$Posterior = Posterior
