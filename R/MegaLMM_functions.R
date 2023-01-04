@@ -364,6 +364,10 @@ remove_nuisance_parameters = function(MegaLMM_state) {
     B1[] = sweep(B1,2,sqrt(var_Eta),'*')
     B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
     Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
+    if(exists('Lambda_beta',current_state)) {
+      Lambda_beta[] = sweep(Lambda_beta,2,sqrt(var_Eta),'*')
+      Lambda_beta_var[] = sweep(Lambda_beta_var,2,var_Eta,'*')
+    }
     Eta[] = sweep(Eta,2,sqrt(var_Eta),'*')
     tot_Eta_prec[] = tot_Eta_prec / var_Eta
     
