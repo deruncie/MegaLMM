@@ -357,6 +357,10 @@ remove_nuisance_parameters = function(MegaLMM_state) {
     B2_F[] = sweep(B2_F,2,sqrt(F_var),'/')
     F[] = sweep(F,2,sqrt(F_var),'/')
     Lambda[] = sweep(Lambda,1,sqrt(F_var),'*')
+    if(exists('Lambda_beta')) {
+      Lambda_beta[] = sweep(Lambda_beta,1,sqrt(F_var),'*')
+      Lambda_beta_var[] = sweep(Lambda_beta_var,1,F_var,'*')
+    }
     
     # re-scale by var_Eta
     if(!'var_Eta' %in% ls()) var_Eta = rep(1,ncol(Lambda))
@@ -364,10 +368,6 @@ remove_nuisance_parameters = function(MegaLMM_state) {
     B1[] = sweep(B1,2,sqrt(var_Eta),'*')
     B2_R[] = sweep(B2_R,2,sqrt(var_Eta),'*')
     Lambda[] = sweep(Lambda,2,sqrt(var_Eta),'*')
-    if(exists('Lambda_beta')) {
-      Lambda_beta[] = sweep(Lambda_beta,2,sqrt(var_Eta),'*')
-      Lambda_beta_var[] = sweep(Lambda_beta_var,2,var_Eta,'*')
-    }
     Eta[] = sweep(Eta,2,sqrt(var_Eta),'*')
     tot_Eta_prec[] = tot_Eta_prec / var_Eta
     
