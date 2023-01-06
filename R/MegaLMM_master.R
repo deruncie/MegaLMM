@@ -878,10 +878,10 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     if(length(x) == 0) next
 
     # find Qt = svd(ZLKLtZt)$u
-    if(ncol(ZL) < nrow(ZL)*.9) {
+    if(ncol(ZL) < nrow(ZL[x,])*.9) {
       # a faster way of taking the SVD of ZLKZLt, particularly if ncol(ZL) < nrow(ZL). Probably no benefit if ncol(K) > nrow(ZL)
       if(is.null(svd_K1)){
-        svd_K1 = svd(RE_setup[[1]]$K)
+        svd_K1 = svd(RE_setup[[1]]$K[x,x])
       }
       qr_ZU = qr(RE_setup[[1]]$ZL[x,,drop=FALSE] %*% svd_K1$u)
       R_ZU = drop0(qr.R(qr_ZU,complete=F),tol=run_parameters$drop0_tol)
