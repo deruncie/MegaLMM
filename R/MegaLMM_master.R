@@ -378,9 +378,10 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
             # if need to use reduced rank model, then use D of K in place of K and merge L into Z
             # otherwise, use original K, set L = Diagonal(1,r)
             if(r_eff < length(ldl_k$d)) {
-              K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
-              K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
-              L = t(ldl_k$P) %*% ldl_k$L[,large_d]
+            #   K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
+            #   K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
+              K = K_inv = as(diag(1,r_eff),'dgCMatrix')
+              L = t(ldl_k$P) %*% t(sqrt(ldl_k$d[large_d])*t(ldl_k$L[,large_d]))
               if(is(L,'dgeMatrix')) L = as.matrix(L)
             } else{
               L = as(diag(1,nrow(K)),'dgCMatrix')
