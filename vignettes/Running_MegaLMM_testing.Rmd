@@ -20,7 +20,7 @@ nRep = 10
 nTraits = 100
 nFixedEffects = 2 # fixed effects are effects on the factors
 nFactors = 10
-factor_h2s = c(rep(0,nFactors/2),rep(0.9,nFactors/2))  # factor_h2 is the % of variance in each factor trait that is explained by additive genetic variation.
+factor_h2s = sample(c(rep(0,nFactors/2),rep(0.9,nFactors/2)))  # factor_h2 is the % of variance in each factor trait that is explained by additive genetic variation.
 # The is after accounting for the fixed effects on the factors
 Va = 2 # residual genetic variance in each of the observed traits after accounting for the factors
 Ve = 2 # residual microenvironmental variance in each of the observed traits after accounting for the factors
@@ -73,8 +73,8 @@ priors = MegaLMM_priors(
     Lambda_df = 3,
     delta_1   = list(shape = 2,  rate = 1),
     delta_2   = list(shape = 3, rate = 1),  # parameters of the gamma distribution giving the expected change in proportion of non-zero loadings in each consecutive factor
-    # X = setup$Lambda_X,#cbind(1,setup$Lambda_X), #matrix(0,100,0),#1/1*
-    # X_group = setup$Lambda_groups,
+    X = setup$Lambda_X,#cbind(1,setup$Lambda_X), #matrix(0,100,0),#1/1*
+    X_group = setup$Lambda_groups,
     Lambda_beta_var_shape = 3,
     Lambda_beta_var_rate = 1,
     delta_iterations_factor = 100   # parameter that affects mixing of the MCMC sampler. This value is generally fine.
@@ -112,8 +112,8 @@ Setting up the `MegaLMM_state` object for sampling has several steps.
 
 ```{r}
 X2_F = cbind(data$Fixed1)
-MegaLMM_state = setup_model_MegaLMM(Y,            # n x p data matrix
-                              ~1 + (1|animal),  # RHS of base model for factors and residuals. Fixed effects defined here only apply to the factor residuals.
+MegaLMM_state = setup_model_MegaLMM(Y+10,            # n x p data matrix
+                              ~0 + (1|animal),  # RHS of base model for factors and residuals. Fixed effects defined here only apply to the factor residuals.
                               data = data,         # the data.frame with information for constructing the model matrices
                               extra_regressions = list(X=X2_F,factors=T),
                               relmat = list(animal = K), # covariance matrices for the random effects. If not provided, assume uncorrelated
@@ -180,10 +180,10 @@ for(i  in 1:15) {
     print(MegaLMM_state$run_parameters$burn)
   }
 }
- MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter*10) 
+ MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter) 
  traceplot_array(MegaLMM_state$Posterior$Lambda_beta,facet_dim=2,name = 'Lambda_beta.pdf')
  traceplot_array(MegaLMM_state$Posterior$Lambda_beta_var,facet_dim=3,name = 'Lambda_beta_var.pdf')
- MegaLMM_state1 = MegaLMM_state
+ # MegaLMM_state1 = MegaLMM_state
 ```
 
 

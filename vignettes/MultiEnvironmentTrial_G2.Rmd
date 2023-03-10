@@ -174,12 +174,11 @@ To evaluate whether the multi-trait prediction from `MegaLMM` is useful, we'll r
 library(rrBLUP)
 rrBLUP_predictions = matrix(NA,nrow(Y),ncol(Y),dimnames = dimnames(Y))
 for(i in 1:ncol(Y)) {
-  X = model.matrix(~Population+ibc,sample_data) # we will include Population as a covariate if it is variable among the individuals for this environment
-  if(var(X[!is.na(Y_train[,i]),2]) == 0) X = X[,-2,drop=FALSE]
-  res = mixed.solve(y = Y_train[,i],
+  X = model.matrix(~Population,sample_data) # we will include Population as a covariate if it is variable among the individuals for this environment
+  if(var(X[!is.na(Y_train[,i]),2]) == 0) X = X[,-2]
+  rrBLUP_predictions[,i] = mixed.solve(y = Y_train[,i],
                                        X = X,
-                                       K = K)
-  rrBLUP_predictions[,i] = c(X %*% res$beta) + res$u
+                                       K = K)$u
 }
 ```
 
@@ -342,14 +341,14 @@ Lambda_prior = list(
       # parameter that affects mixing of the MCMC sampler. This value is generally fine.
   )
 
-# Lambda_prior = list(
-#     sampler = sample_Lambda_prec_ARD,
-#     Lambda_df = 3,
-#     delta_1 = list(shape = 20,rate=1),
-#     delta_2 = list(shape = 3,rate=1),
-#     X = setup$Lambda_X,
-#     delta_iterations_factor = 100
-# )
+Lambda_prior = list(
+    sampler = sample_Lambda_prec_ARD,
+    Lambda_df = 3,
+    delta_1 = list(shape = 20,rate=1),
+    delta_2 = list(shape = 3,rate=1),
+    X = setup$Lambda_X,
+    delta_iterations_factor = 100
+)
 #     dta_1   = list(shape = 2,  rate = 1),
 #     dlta_   = list(shape = 3, rate = 1),
 #       parameters of the gamma distribution giving the expected change

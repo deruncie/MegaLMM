@@ -127,7 +127,7 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                              Lambda_beta = t(do.call(cbind,lapply(seq_along(which(!fixed_factors)),function(k) {
                                prec_e = tot_Eta_prec[1,]*Lambda_phi[k,]*tauh[k]
                                X_std = sqrt(prec_e)*X
-                               lambda_std = sqrt(prec_e)*Lambda[k,]
+                               lambda_std = sqrt(prec_e)*Lambda[k,]#*sqrt(var_Eta) # allow for variance scaling of Y
                                C = crossprod(X_std)
                                diag(C) = diag(C) + 1/Lambda_beta_var[k,X_group]*tauh[k]
                                chol_C = chol(C)
@@ -142,6 +142,7 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                                                        }))
                              Lambda_beta2_std = Lambda_beta^2 / Lambda_beta_var[,X_group,drop=FALSE]
                              Lambda_mean = Lambda_beta %*% t(X)
+                             # Lambda_mean = sweep(Lambda_mean,2,sqrt(var_Eta),'/') # allow for variance scaling of Y
                            }
                            
                            Lambda2 = (Lambda - Lambda_mean)[!fixed_factors,,drop=FALSE]^2
