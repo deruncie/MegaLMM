@@ -253,7 +253,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
     observation_model_parameters$observation_setup$Y_missing = matrix(F,n,p)
   }
   if(!is(observation_model_parameters$observation_setup$Y_missing,'lgTMatrix')){
-    observation_model_parameters$observation_setup$Y_missing = as(observation_model_parameters$observation_setup$Y_missing,'lgTMatrix')
+    observation_model_parameters$observation_setup$Y_missing = as(as(as(observation_model_parameters$observation_setup$Y_missing, "lMatrix"), "generalMatrix"), "TsparseMatrix")
   }
 
   # ----------------------------- #
