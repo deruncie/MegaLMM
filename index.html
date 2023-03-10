@@ -76,7 +76,7 @@
 <div class="section level3">
 <h3 id="installation">Installation:<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h3>
-<pre class="{r}"><code><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">'deruncie/MegaLMM'</span><span class="op">)</span></span></code></pre>
+<pre class="{r}"><code><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">'deruncie/MegaLMM'</span><span class="op">)</span></span></code></pre>
 <p>Note: the package requires OpenMP which causes problems on a Mac. I was able to get everything to run by following these instructions: <a href="https://mac.r-project.org/openmp/" class="external-link uri">https://mac.r-project.org/openmp/</a> including the addition to <code>~/.R/Makevars</code>. Installing on Unix-like machines and maybe Windows should cause fewer problems.</p>
 </div>
 <div class="section level3">
@@ -84,7 +84,7 @@
 </h3>
 <p>Please see the vignette <a href="https://github.com/deruncie/MegaLMM/blob/master/vignettes/MultiEnvironmentTrial.Rmd" class="external-link"><code>MultiEnvironmentTrial.Rmd</code></a> for an introduction to using <strong>MegaLMM</strong>. This will apply <strong>MegaLMM</strong> to the analysis of a very incomplete multi-environment trial, and go through many of the key functions in the package</p>
 <p>You can simply download the .Rmd file above and run it yourself. If you would like to build the vignette, do:</p>
-<pre class="{r}"><code><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu"><a href="https://remotes.r-lib.org/reference/install_github.html" class="external-link">install_github</a></span><span class="op">(</span><span class="st">'deruncie/MegaLMM'</span>, build_opts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"--no-resave-data"</span>, <span class="st">"--no-manual"</span><span class="op">)</span>,force <span class="op">=</span> <span class="cn">TRUE</span>,build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre>
+<pre class="{r}"><code><span><span class="fu">devtools</span><span class="fu">::</span><span class="fu">install_github</span><span class="op">(</span><span class="st">'deruncie/MegaLMM'</span>, build_opts <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"--no-resave-data"</span>, <span class="st">"--no-manual"</span><span class="op">)</span>,force <span class="op">=</span> <span class="cn">TRUE</span>,build_vignettes <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre>
 <pre class="{r}"><code><span><span class="fu"><a href="https://rdrr.io/r/utils/vignette.html" class="external-link">vignette</a></span><span class="op">(</span>topic <span class="op">=</span> <span class="st">'MultiEnvironmentTrial'</span>,package<span class="op">=</span><span class="st">'MegaLMM'</span><span class="op">)</span></span></code></pre>
 </div>
 <div class="section level3">
@@ -150,7 +150,7 @@
 
 <div class="pkgdown">
   <p></p>
-<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.6.</p>
+<p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.0.7.</p>
 </div>
 
       </footer>
