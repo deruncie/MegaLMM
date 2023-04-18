@@ -272,21 +272,18 @@ earlier run, this will erase them all!</li>
 <span>                              relmat <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>animal <span class="op">=</span> <span class="va">K</span><span class="op">)</span>, <span class="co"># covariance matrices for the random effects. If not provided, assume uncorrelated</span></span>
 <span>                              run_parameters<span class="op">=</span><span class="va">run_parameters</span>,</span>
 <span>                              run_ID <span class="op">=</span> <span class="st">'MegaLMM_example'</span></span>
-<span>                                <span class="op">)</span></span></code></pre></div>
-<pre><code><span><span class="co">## Warning: as(&lt;matrix&gt;, "lgTMatrix") is deprecated since Matrix 1.5-0; do</span></span>
-<span><span class="co">## as(as(as(., "lMatrix"), "generalMatrix"), "TsparseMatrix") instead</span></span></code></pre>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">maps</span> <span class="op">=</span> <span class="fu">make_Missing_data_map</span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">)</span></span></code></pre></div>
+<span>                                <span class="op">)</span></span>
+<span><span class="va">maps</span> <span class="op">=</span> <span class="fu">make_Missing_data_map</span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">##   map N_groups max_group_size total_kept_NAs</span></span>
 <span><span class="co">## 1   1        1            500              0</span></span></code></pre>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">MegaLMM_state</span> <span class="op">=</span> <span class="fu">set_Missing_data_map</span><span class="op">(</span><span class="va">MegaLMM_state</span>,<span class="va">maps</span><span class="op">$</span><span class="va">Missing_data_map</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">MegaLMM_state</span> <span class="op">=</span> <span class="fu"><a href="../reference/set_priors_MegaLMM.html">set_priors_MegaLMM</a></span><span class="op">(</span><span class="va">MegaLMM_state</span>,<span class="va">priors</span><span class="op">)</span>  <span class="co"># apply the priors</span></span>
 <span><span class="va">MegaLMM_state</span> <span class="op">=</span> <span class="fu"><a href="../reference/initialize_variables_MegaLMM.html">initialize_variables_MegaLMM</a></span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">)</span> <span class="co"># initialize the model</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "initializing Lambda_prec horseshoe"</span></span>
 <span><span class="co">## [1] "initializing B_prec horseshoe"</span></span></code></pre>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">MegaLMM_state</span> <span class="op">=</span> <span class="fu"><a href="../reference/initialize_MegaLMM.html">initialize_MegaLMM</a></span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">)</span> <span class="co"># run the initial calculations</span></span></code></pre></div>
 <pre><code>## [1] "Pre-calculating random effect inverse matrices for 1 groups of traits and 20 sets of random effect weights"
 ## 
@@ -314,7 +311,7 @@ earlier run, this will erase them all!</li>
   |===================================                                   |  50%
   |                                                                            
   |======================================================================| 100%</code></pre>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">MegaLMM_state</span> <span class="op">=</span> <span class="fu"><a href="../reference/clear_Posterior.html">clear_Posterior</a></span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">)</span> <span class="co"># prepare the output directories</span></span></code></pre></div>
 </div>
 <div class="section level2">
@@ -346,7 +343,7 @@ converge<a class="anchor" aria-label="anchor" href="#tools-for-re-setting-poster
 </h3>
 <p><code>MegaLMM_state = clear_Posterior(MegaLMM_state)</code></p>
 <p><code>MegaLMM_state = reorder_factors(MegaLMM_state)</code></p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># The following code is optional, but tries to guess for your system how many CPUs to use for fastest processing</span></span>
 <span><span class="co"># (n_threads = optimize_n_threads(MegaLMM_state,seq(1,RcppParallel::defaultNumThreads(),by=1),times=2))</span></span>
 <span><span class="co"># set_MegaLMM_nthreads(n_threads$optim)</span></span>
@@ -375,7 +372,7 @@ converge<a class="anchor" aria-label="anchor" href="#tools-for-re-setting-poster
 <span></span>
 <span><span class="co">## Warning in cor(F): the standard deviation is zero</span></span></code></pre>
 <p><img src="Running_MegaLMM_files/figure-html/unnamed-chunk-7-1.png" width="700"></p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Because this was a simulation, we can make some special diagnostic plots by passing in the true values</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">MegaLMM_state</span>,setup <span class="op">=</span> <span class="va">setup</span><span class="op">)</span> </span></code></pre></div>
 <p>Look for the output in the <code>MegaLMM_example</code> (our
@@ -385,7 +382,7 @@ converge<a class="anchor" aria-label="anchor" href="#tools-for-re-setting-poster
 <div class="section level2">
 <h2 id="work-with-the-posterior-samples">Work with the Posterior samples<a class="anchor" aria-label="anchor" href="#work-with-the-posterior-samples"></a>
 </h2>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># reload the whole database of posterior samples</span></span>
 <span><span class="va">MegaLMM_state</span><span class="op">$</span><span class="va">Posterior</span> <span class="op">=</span> <span class="fu"><a href="../reference/reload_Posterior.html">reload_Posterior</a></span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">)</span></span>
 <span><span class="va">U_hat</span> <span class="op">=</span> <span class="fu"><a href="../reference/get_posterior_mean.html">get_posterior_mean</a></span><span class="op">(</span><span class="va">MegaLMM_state</span>,<span class="va">U_R</span> <span class="op">+</span> <span class="va">U_F</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">Lambda</span><span class="op">)</span></span>
@@ -395,17 +392,17 @@ converge<a class="anchor" aria-label="anchor" href="#tools-for-re-setting-poster
 <pre><code><span><span class="co">##  [1] "Lambda"       "U_F"          "F"            "delta"        "tot_F_prec"  </span></span>
 <span><span class="co">##  [6] "F_h2"         "tot_Eta_prec" "resid_h2"     "B1"           "B2_F"        </span></span>
 <span><span class="co">## [11] "B2_R"         "U_R"          "cis_effects"  "Lambda_m_eff" "Eta"</span></span></code></pre>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">MegaLMM_state</span><span class="op">$</span><span class="va">Posterior</span><span class="op">$</span><span class="va">posteriorMean_params</span>  <span class="co"># these ones only have the posterior mean saved, not individual posterior samples</span></span></code></pre></div>
 <pre><code><span><span class="co">## [1] "Eta_mean"</span></span></code></pre>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># instead, load only a specific parameter</span></span>
 <span><span class="va">Lambda</span> <span class="op">=</span> <span class="fu"><a href="../reference/load_posterior_param.html">load_posterior_param</a></span><span class="op">(</span><span class="va">MegaLMM_state</span>,<span class="st">'Lambda'</span><span class="op">)</span></span>
 <span></span>
 <span><span class="co"># boxplots are good ways to visualize Posterior distributions on sets of related parameters</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/boxplot.html" class="external-link">boxplot</a></span><span class="op">(</span><span class="va">MegaLMM_state</span><span class="op">$</span><span class="va">Posterior</span><span class="op">$</span><span class="va">F_h2</span><span class="op">[</span>,<span class="fl">1</span>,<span class="op">]</span><span class="op">)</span></span></code></pre></div>
 <p><img src="Running_MegaLMM_files/figure-html/unnamed-chunk-9-1.png" width="700"></p>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># get posterior distribution on a function of parameters</span></span>
 <span><span class="co"># This is how to calculate the G-matrix for random effect #1 (ie animal above.)</span></span>
 <span><span class="va">G_samples</span> <span class="op">=</span> <span class="fu"><a href="../reference/get_posterior_FUN.html">get_posterior_FUN</a></span><span class="op">(</span><span class="va">MegaLMM_state</span>,<span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="va">Lambda</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">F_h2</span><span class="op">[</span><span class="st">'animal'</span>,<span class="op">]</span><span class="op">)</span> <span class="op"><a href="https://rdrr.io/r/base/matmult.html" class="external-link">%*%</a></span> <span class="va">Lambda</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="va">resid_h2</span><span class="op">[</span><span class="st">'animal'</span>,<span class="op">]</span><span class="op">/</span><span class="va">tot_Eta_prec</span><span class="op">[</span><span class="fl">1</span>,<span class="op">]</span><span class="op">)</span><span class="op">)</span></span>
