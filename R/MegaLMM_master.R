@@ -347,7 +347,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
 
   # combine Z matrices
   Z = do.call(cbind,lapply(RE_setup,function(x) x$Z))
-  Z = as(Z,'dgCMatrix')
+  Z = make_sparse(Z,'dgCMatrix')
 
 
   # find RE indices
@@ -369,8 +369,8 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
         if('K' %in% ls() && !is.null(K)){
           id_names = rownames(K)
           if(is(K,'Matrix') & isDiagonal(K)) {
-            L = as(diag(1,nrow(K)),'dgCMatrix')
-            K_inv = as(diag(1/diag(K)),'dgCMatrix')
+            L = make_sparse(diag(1,nrow(K)),'dgCMatrix')
+            K_inv = make_sparse(diag(1/diag(K)),'dgCMatrix')
           } else {
             ldl_k = LDLt(K)
             large_d = ldl_k$d > run_parameters$K_eigen_tol
@@ -378,13 +378,13 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
             # if need to use reduced rank model, then use D of K in place of K and merge L into Z
             # otherwise, use original K, set L = Diagonal(1,r)
             if(r_eff < length(ldl_k$d)) {
-              K = as(diag(ldl_k$d[large_d]),'dgCMatrix')
-              K_inv = as(diag(1/ldl_k$d[large_d]),'dgCMatrix')
+              K = make_sparse(diag(ldl_k$d[large_d]),'dgCMatrix')
+              K_inv = make_sparse(diag(1/ldl_k$d[large_d]),'dgCMatrix')
               L = t(ldl_k$P) %*% ldl_k$L[,large_d]
               if(is(L,'dgeMatrix')) L = as.matrix(L)
             } else{
-              L = as(diag(1,nrow(K)),'dgCMatrix')
-              K_inv = as(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')
+              L = make_sparse(diag(1,nrow(K)),'dgCMatrix')
+              K_inv = make_sparse(with(ldl_k,t(P) %*% crossprod(diag(1/sqrt(d)) %*% solve(L)) %*% P),'dgCMatrix')
             }
             rm(list=c('ldl_k','large_d','r_eff'))
           }
@@ -395,13 +395,13 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
           if(is.null(rownames(K_inv))) rownames(K_inv) = 1:nrow(K_inv)
           K = solve(K_inv)
           rownames(K) = rownames(K_inv)
-          L = as(diag(1,nrow(K)),'dgCMatrix')
+          L = make_sparse(diag(1,nrow(K)),'dgCMatrix')
         } else{
-          K = as(diag(1,ncol(Z)),'dgCMatrix')
+          K = make_sparse(diag(1,ncol(Z)),'dgCMatrix')
           rownames(K) = colnames(Z)
           id_names = rownames(K)
           K_inv = K
-          L = as(diag(1,nrow(K)),'dgCMatrix')
+          L = make_sparse(diag(1,nrow(K)),'dgCMatrix')
         }
        # if(is.null(id_names)) id_names = 1:length(id_names)
         rownames(L) = paste(id_names,re_name,sep='::')
@@ -418,7 +418,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   #     S = simultaneous_diagonalize(crossprod(ZL),solve(chol(forceSymmetric(K_inv))))$S
   #     ZL = ZL %*% S
   #     L = L %*% S
-  #     K = K_inv = as(diag(1,nrow(K)),'dgCMatrix')
+  #     K = K_inv = make_sparse(diag(1,nrow(K)),'dgCMatrix')
   #   })
   # }
   # # diagonalize RE_setup[[1]]
@@ -431,22 +431,22 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
   #   if(nnzero(ZL)/length(ZL) > 0.5) {
   #     ZL = as.matrix(ZL)
   #   } else{
-  #     ZL = as(ZL,'dgCMatrix')
+  #     ZL = make_sparse(ZL,'dgCMatrix')
   #   }
   #   if(nnzero(RE_L)/length(RE_L) > 0.5) {
   #     RE_L = as.matrix(RE_L)
   #   } else{
-  #     RE_L = as(RE_L,'dgCMatrix')
+  #     RE_L = make_sparse(RE_L,'dgCMatrix')
   #   }
   #   MegaLMM_state$data_matrices$ZL = ZL
   #   MegaLMM_state$data_matrices$RE_L = RE_L
-  #   chol_Ki_mats[[1]] = as(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
+  #   chol_Ki_mats[[1]] = make_sparse(diag(1,nrow(chol_Ki_mats[[1]])),'dgCMatrix')
   # }
   
   
   ZL = do.call(cbind,lapply(RE_setup,function(re) re$ZL))
   if(nnzero(ZL)/length(ZL) < .25) {
-    ZL = as(ZL,'dgCMatrix')
+    ZL = make_sparse(ZL,'dgCMatrix')
   } else{
     ZL = as.matrix(ZL)
   }
@@ -459,7 +459,7 @@ setup_model_MegaLMM = function(Y,formula,extra_regressions=NULL,data,relmat=NULL
     RE_L = RE_setup[[1]]$L
   }
   if(nnzero(RE_L)/length(RE_L) < 0.25) {
-    RE_L = as(RE_L,'dgCMatrix')
+    RE_L = make_sparse(RE_L,'dgCMatrix')
   } else{
     RE_L = as.matrix(RE_L)
   }
@@ -851,10 +851,10 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       if(isDiagonal(K_inv)) {
         sparseMatrix(i=1:nrow(K_inv),j=1:nrow(K_inv),x=sqrt(diag(K_inv)))
       } else{
-        as(chol(forceSymmetric(K_inv)),'dgCMatrix')
+        make_sparse(chol(forceSymmetric(K_inv)),'dgCMatrix')
       }
     } else {
-      as(chol(K_inv),'dgCMatrix')
+      make_sparse(chol(K_inv),'dgCMatrix')
     }
   })
 
@@ -899,7 +899,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       }
       Qt = t(result$u)
     }
-    Qt = as(drop0(as(Qt,'dgCMatrix'),tol = run_parameters$drop0_tol),'dgCMatrix')
+    Qt = make_sparse(drop0(make_sparse(Qt,'dgCMatrix'),tol = run_parameters$drop0_tol),'dgCMatrix')
     if(nnzero(Qt)/length(Qt) > 0.5) Qt = as.matrix(Qt)  # only store as sparse if it is sparse
 
     QtZL_matrices_set = lapply(RE_setup,function(re) Qt %*% re$ZL[x,,drop=FALSE])
@@ -924,7 +924,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     ZKZts_set = list()
     for(i in 1:n_RE){
       ZKZts_set[[i]] = forceSymmetric(drop0(QtZL_matrices_set[[i]] %*% RE_setup[[i]]$K %*% t(QtZL_matrices_set[[i]]),tol = run_parameters$drop0_tol))
-      ZKZts_set[[i]] = as(as(ZKZts_set[[i]],'CsparseMatrix'),'dgCMatrix')
+      # ZKZts_set[[i]] = as(as(ZKZts_set[[i]],'CsparseMatrix'),'dgCMatrix')
+      ZKZts_set[[i]] = make_sparse(ZKZts_set[[i]],'dgCMatrix')
       if(nnzero(ZKZts_set[[i]])/length(ZKZts_set[[i]]) > 0.5) {
         ZKZts_set[[i]] = as.matrix(ZKZts_set[[i]])
       }
@@ -944,19 +945,19 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     if(verbose>1) print(sprintf('Set %d S',set))
     ZL_list[[set]] = ZL
     chol_Ki_mats_set = chol_Ki_mats
-    ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
+    ZtZ_set = make_sparse(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
     if(length(RE_setup) == 1) {
       S = simultaneous_diagonalize(ZtZ_set,solve(chol_Ki_mats[[1]]))$S
       if(nnzero(S)/length(S) > 0.5) {
         S = as.matrix(S)  # only store as sparse if it is sparse
       } else {
-        S = as(S,'dgCMatrix')
+        S = make_sparse(S,'dgCMatrix')
       }
       ZL_list[[set]] = ZL_list[[set]] %**% S
       ZtZ_set = Diagonal(ncol(ZL),colSums(ZL_list[[set]][x,]^2))
-      # ZtZ_set = as(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')  # Not needed because must be symmetric
+      # ZtZ_set = make_sparse(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')  # Not needed because must be symmetric
       RE_L_list[[set]] = RE_setup[[1]]$L %**% S
-      chol_Ki_mats_set[[1]] = as(diag(1,nrow(ZtZ_set)),'dgCMatrix')
+      chol_Ki_mats_set[[1]] = make_sparse(diag(1,nrow(ZtZ_set)),'dgCMatrix')
     }
     
     if(verbose>1) print(sprintf('Set %d chol_ZtZ_Kinv_list_list',set))

@@ -736,10 +736,11 @@ MegaLMM_state = readRDS('MegaLMM_state_run_01.rds')
 print(MegaLMM_state)
 ```
 
-However, to re-start the sampling, all you actually need is the initialized `MegaLMM_state` object and a stored `current_state` slot. This slot is a list with the current state of all parameters as well as the random number generator. This gets automatically saved in the `[run_ID]` directory, so you can re-run the `setup_model_MegaLMM()` function, add priors, initialize, etc, and then reload the `current_state` and resume the chain where you left off:
+However, to re-start the sampling, all you actually need is the initialized `MegaLMM_state` object with a stored `current_state` slot and the posterior database in the `Posterior` slot. The first slot is a list with the current state of all parameters as well as the random number generator. This gets automatically saved in the `[run_ID]` directory, so you can re-run the `setup_model_MegaLMM()` function, add priors, initialize, etc, and then reload the `current_state` and resume the chain where you left off. The second is a list with the posterior matrices and associated information that gets saved as `Posterior/Posterior_base.rds`. You can load base like this:
 
 ```{r}
-MegaLMM_state$current_state = readRDS('MegaLMM_fold_01/current_state.rds')
+MegaLMM_state$current_state = readRDS(file.path(MegaLMM_state$run_ID,'current_state.rds'))
+MegaLMM_state$Posterior = readRDS(file.path(MegaLMM_state$run_ID,'Posterior/Posterior_base.rds'))
 ```
 
 ### Convergence issues
