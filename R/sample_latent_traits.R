@@ -196,7 +196,7 @@ sample_latent_traits = function(MegaLMM_state,...) {
                                       resid_h2_index[cols,drop=FALSE])
       
       # prepare Eta_tilde for sampling F below
-      Eta_tilde[,cols] = Eta_tilde[,cols] + F_Lambda[,cols] - ZL_list[[set]] %*% U_R[,cols,drop=FALSE] 
+      Eta_tilde[,cols] = Eta_tilde[,cols] + F_Lambda[,cols] - ZL_list[[set]] %**% U_R[,cols,drop=FALSE] 
     }
 
 
