@@ -39,14 +39,28 @@ We will use the `MegaLMM`, `rrBLUP`, and `ggplot2` packages.
 `rrBLUP` and `ggplot2` can be installed from CRAN if you do not have them already:
 
 ```{r}
+if(!require(rrBLUP)) { install.packages("rrBLUP"); library(rrBLUP) }
+if(!require(ggplot2)) { install.packages("ggplot2"); library(ggplot2) }
+```
+
+
+```{r eval=FALSE, include=FALSE}
 # install.packages('rrBLUP','ggplot2')  # uncomment if needed to install
 library(rrBLUP)
 library(ggplot2)
 ```
 
-`MegaLMM` is installed from github:
+`MegaLMM` is installed from GitHub:
 
 ```{r}
+if(!require(devtools)) { install.packages("devtools"); library(devtools) }
+if(!require(MegaLMM)) { 
+  devtools::install_github('deruncie/MegaLMM')
+  library(MegaLMM) 
+  }
+```
+
+```{r eval=FALSE, include=FALSE}
 # devtools::install_github('deruncie/MegaLMM') # uncomment if needed to install. Install devtools first if needed with install.packages('devtools')
 library(MegaLMM)
 ```
@@ -548,8 +562,8 @@ for(i in 1:5) {
     # Draw n_iter new samples, storing the chain
   MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)
     # make diagnostic plots
-  traceplot_array(MegaLMM_state$Posterior$Lambda,name = 'Lambda.pdf')
-  traceplot_array(MegaLMM_state$Posterior$U,name = 'U.pdf',
+  traceplot_array(MegaLMM_state$Posterior$Lambda,name = file.path(MegaLMM_state$run_ID,'Lambda.pdf'))
+  traceplot_array(MegaLMM_state$Posterior$U,name =  file.path(MegaLMM_state$run_ID,'U.pdf'),
                   facet_dim = 3,mask = fold_ID_matrix != 1)
   print(sprintf('Completed %d burnin samples', MegaLMM_state$current_state$nrun))
 }
@@ -753,10 +767,11 @@ MegaLMM_state = readRDS('MegaLMM_state_run_01.rds')
 print(MegaLMM_state)
 ```
 
-However, to re-start the sampling, all you actually need is the initialized `MegaLMM_state` object and a stored `current_state` slot. This slot is a list with the current state of all parameters as well as the random number generator. This gets automatically saved in the `[run_ID]` directory, so you can re-run the `setup_model_MegaLMM()` function, add priors, initialize, etc, and then reload the `current_state` and resume the chain where you left off:
+However, to re-start the sampling, all you actually need is the initialized `MegaLMM_state` object with a stored `current_state` slot and the posterior database in the `Posterior` slot. The first slot is a list with the current state of all parameters as well as the random number generator. This gets automatically saved in the `[run_ID]` directory, so you can re-run the `setup_model_MegaLMM()` function, add priors, initialize, etc, and then reload the `current_state` and resume the chain where you left off. The second is a list with the posterior matrices and associated information that gets saved as `Posterior/Posterior_base.rds`. You can load base like this:
 
 ```{r}
-MegaLMM_state$current_state = readRDS('MegaLMM_fold_01/current_state.rds')
+MegaLMM_state$current_state = readRDS(file.path(MegaLMM_state$run_ID,'current_state.rds'))
+MegaLMM_state$Posterior = readRDS(file.path(MegaLMM_state$run_ID,'Posterior/Posterior_base.rds'))
 ```
 
 ### Convergence issues

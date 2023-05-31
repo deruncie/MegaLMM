@@ -12,6 +12,10 @@ optimize_n_threads = function(MegaLMM_state,n_threads,times = 10) {
   list(optim = as.numeric(as.character(summary_res$expr[order(summary_res$mean)[1]])),results = summary_res)
 }
 
+make_sparse = function(X,type = 'dgCMatrix') {
+  X = as(as(as(X,'generalMatrix'),'CsparseMatrix'),type)
+  X
+}
 
 make_model_setup = function(formula,data,relmat = NULL) {
   # ensure data has rownames
@@ -72,7 +76,7 @@ make_model_setup = function(formula,data,relmat = NULL) {
     K = NULL
     if(term %in% names(relmat)) {
       K = relmat[[term]]
-      if(is(K,'dsCMatrix')) K = as(K,'dgCMatrix')
+      if(is(K,'dsCMatrix')) K = make_sparse(K,'dgCMatrix')
       if(nnzero(K)/length(K) > .5) K = as.matrix(K)  # if not really sparse
     }
 
@@ -81,7 +85,7 @@ make_model_setup = function(formula,data,relmat = NULL) {
       colnames(K) = rownames(K)
       K = K[colnames(Zs_term[[1]]),colnames(Zs_term[[1]])]
     } else {
-      K = as(diag(1,ncol(Zs_term[[1]])),'dgCMatrix')
+      K = make_sparse(diag(1,ncol(Zs_term[[1]])),'dgCMatrix')
       rownames(K) = colnames(K) = colnames(Zs_term[[1]])
     }
 
@@ -94,7 +98,7 @@ make_model_setup = function(formula,data,relmat = NULL) {
       while(name %in% names(RE_setup)) name = paste0(name,'.1') # hack for when same RE used multiple times
 
       # Z matrix
-      Z = as(Zs_term[[j]],'dgCMatrix')
+      Z = make_sparse(Zs_term[[j]],'dgCMatrix')
 
 
       RE_setup[[name]] = list(

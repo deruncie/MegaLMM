@@ -43,7 +43,7 @@ missing_data_model = function(observation_model_parameters,MegaLMM_state = list(
         Mean_Y = rep(0,p_Y)
         var_Eta = rep(1,p_Y)
       }
-      Y_missing = as(is.na(Y),'lgTMatrix')# un-compressed logical sparse matrix
+      Y_missing = as(as(as(is.na(Y), "lMatrix"), "generalMatrix"), "TsparseMatrix") # un-compressed logical sparse matrix
       return(list(
         Eta = Eta,
         n = nrow(Y),
@@ -350,7 +350,7 @@ cis_eQTL_model = function(observation_model_parameters,MegaLMM_state = list()){
   observation_model_state = with(c(observation_model_parameters,data_matrices,current_state),{
     n = nrow(Y)
     p = ncol(Y)
-    Ut_cis = as(diag(1,n),'dgCMatrix')
+    Ut_cis = make_sparse(diag(1,n),'dgCMatrix')
     s_cis = rep(1,n)
     if(!exists('Eta')) {
       Eta_mean = matrix(0,n,p)
