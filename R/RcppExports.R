@@ -191,3 +191,7 @@ parallel_Single_regression_sampler <- function(Y_, X1_, X2_, V_, chol_V_, Y_prec
     .Call(`_MegaLMM_parallel_Single_regression_sampler`, Y_, X1_, X2_, V_, chol_V_, Y_prec, Y_prec_a0, Y_prec_b0, prior_prec_alpha, prior_mean_beta, prior_prec_beta, current_alphas, betas_alpha, betas_beta, betas_pi, betas_delta, run_sampler_times)
 }
 
+cbind_list_withName <- function(combined, list, variable) {
+    invisible(.Call(`_MegaLMM_cbind_list_withName`, combined, list, variable))
+}
+

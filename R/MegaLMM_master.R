@@ -950,7 +950,12 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
     chol_Ki_mats_set = chol_Ki_mats
     ZtZ_set = make_sparse(forceSymmetric(drop0(crossprod(ZL_list[[set]][x,]),tol = run_parameters$drop0_tol)),'dgCMatrix')
     if(length(RE_setup) == 1) {
-      S = simultaneous_diagonalize(ZtZ_set,solve(chol_Ki_mats[[1]]))$S
+      tryCatch({S <- simultaneous_diagonalize(ZtZ_set,solve(chol_Ki_mats[[1]]))$S},
+               error = function(e) {
+                 outfile = sprintf('%s/bad_svd.rds',MegaLMM_state$run_ID)
+                 saveRDS(list(ZtZ_set,chol_Ki_mats[[1]]),file = outfile)
+                 print(set)
+               })
       if(nnzero(S)/length(S) > 0.5) {
         S = as.matrix(S)  # only store as sparse if it is sparse
       } else {

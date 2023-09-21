@@ -412,6 +412,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// cbind_list_withName
+void cbind_list_withName(Map<MatrixXd> combined, const Rcpp::List& list, std::string variable);
+RcppExport SEXP _MegaLMM_cbind_list_withName(SEXP combinedSEXP, SEXP listSEXP, SEXP variableSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< Map<MatrixXd> >::type combined(combinedSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::List& >::type list(listSEXP);
+    Rcpp::traits::input_parameter< std::string >::type variable(variableSEXP);
+    cbind_list_withName(combined, list, variable);
+    return R_NilValue;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_MegaLMM_rstdnorm_mat_f", (DL_FUNC) &_MegaLMM_rstdnorm_mat_f, 2},
@@ -440,6 +452,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MegaLMM_get_fitted_set_c", (DL_FUNC) &_MegaLMM_get_fitted_set_c, 2},
     {"_MegaLMM_parallel_block_regression_sampler", (DL_FUNC) &_MegaLMM_parallel_block_regression_sampler, 11},
     {"_MegaLMM_parallel_Single_regression_sampler", (DL_FUNC) &_MegaLMM_parallel_Single_regression_sampler, 17},
+    {"_MegaLMM_cbind_list_withName", (DL_FUNC) &_MegaLMM_cbind_list_withName, 3},
     {NULL, NULL, 0}
 };
 
