@@ -324,7 +324,6 @@ set_Missing_data_map = function(MegaLMM_state,Missing_data_map) {
 # finds a matrix S that simultaneously diagonalizes A and B
 # following algorithm here: https://math.stackexchange.com/questions/1079627/simultaneously-diagonalization-of-two-matrices
 simultaneous_diagonalize = function(A,Binvsq) {
-  log('asdf')
   sBAB = svd(t(Binvsq) %*% A %*% Binvsq)
   O = sBAB$u
   S = Binvsq %*% O
