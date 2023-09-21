@@ -953,7 +953,7 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
       tryCatch({S <- simultaneous_diagonalize(ZtZ_set,solve(chol_Ki_mats[[1]]))$S},
                error = function(e) {
                  outfile = sprintf('%s/bad_svd.rds',MegaLMM_state$run_ID)
-                 saveRDS(list(ZtZ_set,chol_Ki_mats[[1]],set),file = outfile)
+                 saveRDS(list(ZL_list[[set]],chol_Ki_mats[[1]],set,x),file = outfile)
                  print(set)
                })
       if(nnzero(S)/length(S) > 0.5) {
