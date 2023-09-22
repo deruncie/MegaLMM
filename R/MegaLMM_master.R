@@ -954,7 +954,8 @@ initialize_MegaLMM = function(MegaLMM_state, ncores = my_detectCores(), Qt_list 
                error = function(e) {
                  outfile = sprintf('%s/bad_svd.rds',MegaLMM_state$run_ID)
                  saveRDS(list(ZL_list[[set]],chol_Ki_mats[[1]],set,x),file = outfile)
-                 print(set)
+                 print(sprintf('SVD error set %d',set))
+                 stop(sprintf('SVD error set %d',set))
                })
       if(nnzero(S)/length(S) > 0.5) {
         S = as.matrix(S)  # only store as sparse if it is sparse
