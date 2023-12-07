@@ -145,7 +145,7 @@ sample_Lambda_prec_ARD = function(MegaLMM_state,...) {
                              # Lambda_mean = sweep(Lambda_mean,2,sqrt(var_Eta),'/') # allow for variance scaling of Y
                            }
                            
-                           Lambda2 = (Lambda - Lambda_mean)[!fixed_factors,,drop=FALSE]^2
+                           Lambda2 = (Lambda[!fixed_factors,,drop=FALSE] - Lambda_mean)^2
                            Lambda2_std = sweep(Lambda2,2,tot_Eta_prec[1,],'*') #/ 2
 
                            Lambda_phi[] = matrix(rgamma(Kr*p,shape = (Lambda_df + 1)/2,rate = (Lambda_df + sweep(Lambda2_std,1,tauh,'*'))/2),nr = Kr,nc = p)
