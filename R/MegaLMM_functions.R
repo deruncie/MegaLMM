@@ -339,6 +339,7 @@ calc_functions = function(MegaLMM_state,functions) {
 remove_nuisance_parameters = function(MegaLMM_state) {
   Missing_data_map = MegaLMM_state$run_variables$Missing_data_map
   RE_L_list = MegaLMM_state$data_matrices$RE_L_list
+  fixed_factors = MegaLMM_state$run_variables$fixed_factor
   # S_list = MegaLMM_state$run_variables$S_list
   current_state = within(MegaLMM_state$current_state,{
     # re-transform random effects using RE_L (RE_L %*% diag(D) %*% t(RE_L) = bdiag(K_mats))
@@ -358,8 +359,8 @@ remove_nuisance_parameters = function(MegaLMM_state) {
     F[] = sweep(F,2,sqrt(F_var),'/')
     Lambda[] = sweep(Lambda,1,sqrt(F_var),'*')
     if(exists('Lambda_beta')) {
-      Lambda_beta[] = sweep(Lambda_beta,1,sqrt(F_var),'*')
-      Lambda_beta_var[] = sweep(Lambda_beta_var,1,F_var,'*')
+      Lambda_beta[] = sweep(Lambda_beta,1,sqrt(F_var[!fixed_factors]),'*')
+      Lambda_beta_var[] = sweep(Lambda_beta_var,1,F_var[!fixed_factors],'*')
     }
     
     # re-scale by var_Eta
