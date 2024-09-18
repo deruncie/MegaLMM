@@ -41,7 +41,7 @@
 #' @export
 #'
 MegaLMM_control = function(
-                        which_sampler = list(Y = 1,F = 1),
+                        which_sampler = list(Y = 2,F = 1),
                         run_sampler_times = 1,
                         scale_Y = c(T,F),
                         K = 20, h2_divisions = 100, h2_step_size = NULL,

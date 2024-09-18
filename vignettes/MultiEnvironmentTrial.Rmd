@@ -43,7 +43,6 @@ if(!require(rrBLUP)) { install.packages("rrBLUP"); library(rrBLUP) }
 if(!require(ggplot2)) { install.packages("ggplot2"); library(ggplot2) }
 ```
 
-
 ```{r eval=FALSE, include=FALSE}
 # install.packages('rrBLUP','ggplot2')  # uncomment if needed to install
 library(rrBLUP)
@@ -188,7 +187,7 @@ To evaluate whether the multi-trait prediction from `MegaLMM` is useful, we'll r
 library(rrBLUP)
 rrBLUP_predictions = matrix(NA,nrow(Y),ncol(Y),dimnames = dimnames(Y))
 for(i in 1:ncol(Y)) {
-  X = model.matrix(~Population+ibc,sample_data) # we will include Population as a covariate if it is variable among the individuals for this environment
+  X = model.matrix(~Population,sample_data) # we will include Population as a covariate if it is variable among the individuals for this environment
   if(var(X[!is.na(Y_train[,i]),2]) == 0) X = X[,-2,drop=FALSE]
   res = mixed.solve(y = Y_train[,i],
                                        X = X,
@@ -215,15 +214,19 @@ First, I'll review the `MegaLMM` model, and then describe the implementation and
 
 **MegaLMM** implements multivariate linear mixed models of the form:
 
-    Y = X*B + Z*U + E
+```         
+Y = X*B + Z*U + E
+```
 
 where `Y` is a `n x t` matrix of observations for `n` individuals and `t` traits, `X` is a design matrix for `b` fixed effects (including an intercept), `Z` is a design matrix for the random effects, and `E` is a `n x t` matrix of residual errors. The random effects are `U` are independent of the residuals, but columns of `U` matrix can be correlated, and each column vector marginally follows a multivariate normal distribution with a known covariance matrix `K`.
 
 MvLMMs like this are notoriously difficult to fit. We address this by re-paramterizing the MvLMM as a mixed effect factor model:
 
-    Y = F*Lambda + Y_R
-    Y_R = X*B_R + Z*U_R + E_R
-    F = X*B_F + Z*U_F + E_F
+```         
+Y = F*Lambda + Y_R
+Y_R = X*B_R + Z*U_R + E_R
+F = X*B_F + Z*U_F + E_F
+```
 
 where `F` is a `n x k` matrix of latent factor traits and `Lambda` is a `k x t` matrix of factor loadings. This is the model actually fit by **MegaLMM**. Basically, we break `Y` which is a set of `t` correlated traits into two sets of uncorrelated traits: `Y_R` and `F`. These are sets of `t` and `K` traits all of which are independently related to the fixed and random effects. All covariances within and among these sets of traits are captured by `Lambda`. Because of this, we can treat each of the columns of `Y_R` or `F` independently and specific a LMM for each of them. Generally, we use the same `X`, `Z` and `K` for all these traits. However in `MegaLMM` we allow some additional flexibility:
 
@@ -247,6 +250,7 @@ The unique aspects of **MegaLMM** relative to other factor models are:
 2.  The factors themselves are also not assumed to be iid, but are modeled with the same LMMs. This highlights the parallel belief that these latent factors represent traits that we just didn't measure directly.
 3.  Each factor is shared by all modeled sources of variation (fixed effects, random effects and residuals), rather than being unique to a particular source.
 4.  The factor loadings are strongly regularized so ensure that estimation is efficient. We accomplish this by ordering the factors from most-to-least important using a prior similar to that proposed by [Bhattarchya and Dunson (2011)](https://pubmed.ncbi.nlm.nih.gov/23049129/)
+5.  Optionally, we also allow regression models for the factor loadings. This feature was described in [Hu et al (2024)](https://www.biorxiv.org/content/10.1101/2024.03.06.583749v1.full). Multiple covariate matrices can be passed to MegaLMM as predictors of the variation within each row of factor loadings.
 
 #### Model formula
 
@@ -301,11 +305,10 @@ run_parameters = MegaLMM_control(
 The function `setup_model_MegaLMM` parses the model formulas, links the GRM to the random effects, and creates an object to store all components of the model.
 
 ```{r}
-sample_data$ibc = diag(K)
 MegaLMM_state = setup_model_MegaLMM(
   Y = Y_train,  
     # The n x p trait matrix
-  formula = ~ Population + ibc + (1|Line),  
+  formula = ~ Population + (1|Line),  
     # This is syntax like lme4 for mixed effect models. 
       # We specify a fixed effect of population and a random effect for genotype (Line)
   data = sample_data,         
@@ -324,6 +327,12 @@ MegaLMM_state = setup_model_MegaLMM(
 )
 ```
 
+**Note**: There is an important optional extra argument `extra_regressions` that can be used to pass covariates specifically for the factors. By default, `X_F`, the design matrix for the factors, is empty. [Qu et al (2022)](10.1093/genetics/iyac183) used this argument to pass genetic marker data as priors for the variation in each column of `F`. [Hu et al (2024)](https://www.biorxiv.org/content/10.1101/2024.03.06.583749v1.full) used this to allow an intercept for each factor which is useful for multi-environment trials. The syntax is:
+
+```{r}
+# extra_regressions = list(X=X_F_mat,factors=T), #This specifices the variable X_F in MegaLMM is assigned to X_F_mat, and applies to the factors F
+```
+
 The output is the variable `MegaLMM_state` which is an object of class `MegaLMM_state` including the following slots:
 
 -   `current_state`: a list with elements holding the current values for all model parameters. Each parameter is stored as a 2d matrix. Variable names correspond as closely as possible to those described in the manuscript: Runcie et al 2020.
@@ -340,48 +349,51 @@ For `Lambda`, we have several types of priors as described in the MegaLMM papers
 
 ```{r}
 Lambda_prior = list(
-    sampler = sample_Lambda_prec_horseshoe,
-      # function that implements the horseshoe-based Lambda prior
-          # described in Runcie et al 2020.
+    sampler = sample_Lambda_prec_ARD,
+      # function that implements the ARD Lambda prior
+          # described in Runcie et al 2013 paper.
           #See code to see requirements for this function.
       # other options are:
-          # ?sample_Lambda_prec_ARD,
+          # ?sample_Lambda_prec_horseshoe
           # ?sample_Lambda_prec_BayesC
-    prop_0 = 0.1,
-      # prior guess at the number of non-zero loadings in the first and most important factor
-    delta = list(shape = 3, scale = 1),
+    Lambda_df = 3,
+    delta_1   = list(shape = 2, rate = 1),
+    delta_2   = list(shape = 3, rate = 1),  # parameters of the gamma distribution giving the expected change in proportion of non-zero loadings in each consecutive factor
       # parameters of the gamma distribution giving the expected change
           # in proportion of non-zero loadings in each consecutive factor
     delta_iterations_factor = 100
       # parameter that affects mixing of the MCMC sampler. This value is generally fine.
   )
+```
 
+##### Environmental covariates
+
+We can specify matrices of environmental covariates as priors for the factor loadings. The covariate matrices should be matrices with the number of rows equal to the number of traits. These should be pasted column-wise into a big matrix `X_Env`. Then, make a vector `X_Env_groups` that 'labels' each column of `X_Env` based on which set of covariates it belongs to. For example, if the first column of `X_Env` is a vector of 1's as an intercept, then the next 5 columns are temperature covariates, and the final 3 columns are soil covariates, we might specify: `X_Env_groups = c(1,2,2,2,2,2,3,3,3)`.
+We pass `X_Env`, `X_Env_groups`, as well as hyperparameters of the inverse gamma prior on the variance of each set of covariate's coefficients: `Lambda_beta_var_shape` and `Lambda_beta_var_rate` 
+
+
+```{r}
 # Lambda_prior = list(
 #     sampler = sample_Lambda_prec_ARD,
-#     Lambda_df = 3,
-#     delta_1 = list(shape = 20,rate=1),
-#     delta_2 = list(shape = 3,rate=1),
-#     X = setup$Lambda_X,
-#     delta_iterations_factor = 100
-# )
-#     dta_1   = list(shape = 2,  rate = 1),
-#     dlta_   = list(shape = 3, rate = 1),
-#       parameters of the gamma distribution giving the expected change
-#
-# in proportion of non-zero loadings in each consecutive factor
-#     deltiterations_factor = 100
-#   rameter that affects mixing of the MCMC sampler. This value is generally fine.
+#       # function that implements the ARD Lambda prior
+#           # described in Runcie et al 2013 paper.
+#           #See code to see requirements for this function.
+#       # other options are:
+#           # ?sample_Lambda_prec_horseshoe
+#           # ?sample_Lambda_prec_BayesC
+#     prop_0 = 0.1,
+#       # prior guess at the number of non-zero loadings in the first and most important factor
+#     delta = list(shape = 3, scale = 1),
+#       # parameters of the gamma distribution giving the expected change
+#           # in proportion of non-zero loadings in each consecutive factor
+#     delta_iterations_factor = 100,
+#       # parameter that affects mixing of the MCMC sampler. This value is generally fine.
+#     X = X_Env,
+#     X_group = X_Env_groups,
+#     fit_X = F,  # we start by letting Lambda converge without X, but then turn it on during burnins.
+#     Lambda_beta_var_shape = 3,
+#     Lambda_beta_var_rate = 1
 #   )
-# 
-# Lama_prior = list(
-#       sampler = sample_Lambda_prec_BayesC, # function that implements the horseshoe-based Lambda prior described in Runcie et al 2020. See code to see requirements for this function.
-#       Lambda_df = 4,
-#       Lambda_scale = 1,
-#       delta_1 = list(shape = 20, rate = 1/2),
-#       delta_2 = list(shape = 3, rate = 1),
-#       fixed_pi = .9,
-#       delta_iterations_factor = 100   # parameter that affects mixing of the MCMC sampler. This value is generally fine.
-#     )
 ```
 
 For the remaining priors we use `MegaLMM_priors`
@@ -551,7 +563,6 @@ Therefore, my recommended manual burnin goes through a few rounds of:
 
 ```{r echo=FALSE, fig.keep='all', message=FALSE, results='hide'}
 n_iter = 100
-MegaLMM_state$run_parameters$which_sampler$Y = 2
 for(i in 1:5) {
   print(sprintf('Burnin run %d',i))
     # Factor order doesn't "mix" well in the MCMC.

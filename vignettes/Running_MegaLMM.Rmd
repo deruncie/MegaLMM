@@ -20,7 +20,7 @@ nRep = 10
 nTraits = 100
 nFixedEffects = 2 # fixed effects are effects on the factors
 nFactors = 10
-factor_h2s = c(rep(0,nFactors/2),rep(0.9,nFactors/2))  # factor_h2 is the % of variance in each factor trait that is explained by additive genetic variation.
+factor_h2s = c(rep(0.3,nFactors/2),rep(0.9,nFactors/2))  # factor_h2 is the % of variance in each factor trait that is explained by additive genetic variation.
 # The is after accounting for the fixed effects on the factors
 Va = 2 # residual genetic variance in each of the observed traits after accounting for the factors
 Ve = 2 # residual microenvironmental variance in each of the observed traits after accounting for the factors
@@ -43,9 +43,8 @@ Several other parameters are also necessary and are described in the help file: 
 
 ```{r}
 run_parameters = MegaLMM_control(
-  which_sampler = list(Y=1,F=1),
   max_NA_groups = 3,
-  scale_Y = FALSE,   # should the columns of Y be re-scaled to have mean=0 and sd=1?
+  scale_Y = FALSE,   # should the columns of Y be re-scaled to have mean=0 and sd=1? In general, the default scale_Y=TRUE is best, but I set to false here to make comparisons with the simulated data easier.
   h2_divisions = 20, # Each variance component is allowed to explain between 0% and 100% of the total variation. How many segments should the range [0,100) be divided into for each random effect?
   h2_step_size = NULL, # if NULL, all possible values of random effects are tried each iteration. If in (0,1), a new candidate set of random effect proportional variances is drawn uniformily with a range of this size
   burn = 00,  # number of burn in samples before saving posterior samples
@@ -73,8 +72,6 @@ priors = MegaLMM_priors(
     Lambda_df = 3,
     delta_1   = list(shape = 2,  rate = 1),
     delta_2   = list(shape = 3, rate = 1),  # parameters of the gamma distribution giving the expected change in proportion of non-zero loadings in each consecutive factor
-    # X = setup$Lambda_X,#cbind(1,setup$Lambda_X), #matrix(0,100,0),#1/1*
-    # X_group = setup$Lambda_groups,
     Lambda_beta_var_shape = 3,
     Lambda_beta_var_rate = 1,
     delta_iterations_factor = 100   # parameter that affects mixing of the MCMC sampler. This value is generally fine.
@@ -111,11 +108,9 @@ Setting up the `MegaLMM_state` object for sampling has several steps.
 6.  Finally, you can initialize the Posterior samples data structures using `clear_Posterior`. This isn't critical if this is the first time running the model (with this `run_ID`), but is good to include in case your directory structure isn't clean. Note, though, that if you were hoping to save posterior samples from an earlier run, this will erase them all!
 
 ```{r}
-X2_F = cbind(data$Fixed1)
 MegaLMM_state = setup_model_MegaLMM(Y,            # n x p data matrix
                               ~1 + (1|animal),  # RHS of base model for factors and residuals. Fixed effects defined here only apply to the factor residuals.
                               data = data,         # the data.frame with information for constructing the model matrices
-                              extra_regressions = list(X=X2_F,factors=T),
                               relmat = list(animal = K), # covariance matrices for the random effects. If not provided, assume uncorrelated
                               run_parameters=run_parameters,
                               run_ID = 'MegaLMM_example'
@@ -129,11 +124,6 @@ MegaLMM_state = initialize_MegaLMM(MegaLMM_state) # run the initial calculations
 
 MegaLMM_state$Posterior$posteriorSample_params = c(MegaLMM_state$Posterior$posteriorSample_params,'Lambda_beta','Lambda_beta_var')
 MegaLMM_state = clear_Posterior(MegaLMM_state) # prepare the output directories
-# MegaLMM_state$current_state$delta=d1
-MegaLMM_state$run_parameters$forceF_var1 = F
-# MegaLMM_state$current_state$Lambda_mean[1:3,] =t(setup$Lambda_X %*% setup$Lambda_beta) 
-# MegaLMM_state$current_state$Lambda_beta[1:3,1] = setup$Lambda_beta
-MegaLMM_state$current_state$F[,1] = 1
 ```
 
 ## Run MCMC
@@ -150,67 +140,40 @@ The way MegaLMM works is that you ask the program to collect a small number of s
 
 `MegaLMM_state = reorder_factors(MegaLMM_state)`
 
-```{r results="hide"}
-# The following code is optional, but tries to guess for your system how many CPUs to use for fastest processing
-# (n_threads = optimize_n_threads(MegaLMM_state,seq(1,RcppParallel::defaultNumThreads(),by=1),times=2))
-# set_MegaLMM_nthreads(n_threads$optim)
-# now do sampling is smallish chunks
-n_iter = 40;  # how many samples to collect at once?
-for(i  in 1:15) {
-  print(sprintf('Run %d',i))
-  MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)  # run MCMC chain n_samples iterations. grainSize is a paramter for parallelization (smaller = more parallelization)
-  print(Image(MegaLMM_state$current_state$Lambda))
-  U = as.matrix(with(setup,U_F %*% Lambda+U_R))
-  plot(diag(cor(U,get_posterior_mean(MegaLMM_state$Posterior$U))))
-  
-  traceplot_array(MegaLMM_state$Posterior$Lambda,facet_dim=2,name = 'Lambda.pdf')
-  traceplot_array(MegaLMM_state$Posterior$B2_F,facet_dim=3,name = 'B2_F.pdf')
- traceplot_array(MegaLMM_state$Posterior$Lambda_beta,facet_dim=2,name = 'Lambda_beta.pdf')
- traceplot_array(MegaLMM_state$Posterior$Lambda_beta_var,facet_dim=2,name = 'Lambda_beta_var.pdf')
-  
-  MegaLMM_state = save_posterior_chunk(MegaLMM_state)  # save any accumulated posterior samples in the database to release memory
-  print(MegaLMM_state) # print status of current chain
-  plot(MegaLMM_state,setup = setup) # make some diagnostic plots. These are saved in a pdf booklet: diagnostic_plots.pdf
-
-  
-  # set of commands to run during burn-in period to help chain converge
-  if(MegaLMM_state$current_state$nrun < MegaLMM_state$run_parameters$burn || i < 15) {
-    MegaLMM_state = reorder_factors(MegaLMM_state,drop_cor_threshold = 0.6) # Factor order doesn't "mix" well in the MCMC. We can help it by manually re-ordering from biggest to smallest
-    MegaLMM_state = clear_Posterior(MegaLMM_state)
-    print(MegaLMM_state$run_parameters$burn)
-  }
+### Run the model for several iterations as burnin
+```{r}
+n_iter = 50
+for(i in 1:5) {
+  print(sprintf('Burnin run %d',i))
+    # Factor order doesn't "mix" well in the MCMC.
+    # We can help it by manually re-ordering from biggest to smallest
+  MegaLMM_state = reorder_factors(MegaLMM_state,drop_cor_threshold = 0.6)
+    # clear any previous collected samples because we've re-started the chain 
+  MegaLMM_state = clear_Posterior(MegaLMM_state)
+    # Draw n_iter new samples, storing the chain
+  MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)
+    # make diagnostic plots
+  traceplot_array(MegaLMM_state$Posterior$Lambda,name = file.path(MegaLMM_state$run_ID,'Lambda.pdf'))
+    # traceplots of values in Lambda are useful to assess convergence. Each sub-plot shows a sample of elements of a single row of Lambda. Ideally these will be lines that are approximately parallel
+  print(sprintf('Completed %d burnin samples', MegaLMM_state$current_state$nrun))
 }
- MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter*10) 
- traceplot_array(MegaLMM_state$Posterior$Lambda_beta,facet_dim=2,name = 'Lambda_beta.pdf')
- traceplot_array(MegaLMM_state$Posterior$Lambda_beta_var,facet_dim=3,name = 'Lambda_beta_var.pdf')
- MegaLMM_state1 = MegaLMM_state
+MegaLMM_state = clear_Posterior(MegaLMM_state)
 ```
 
+### Collect posterior samples
+Now that you have a model that is converged, collect posterior samples
 
 ```{r}
-MegaLMM_state = MegaLMM_state1
-MegaLMM_state = clear_Posterior(MegaLMM_state)
-priors$Lambda_prior = list(
-    sampler = sample_Lambda_prec_ARD,
-        Lambda_df = 3,
-        delta_1   = list(shape = 2,  rate = 1),
-        delta_2   = list(shape = 3, rate = 1),  # parameters of the gamma distribution giving the expected change in proportion of non-zero loadings in each consecutive factor
-        X = setup$Lambda_X, #matrix(0,100,0),#1/1*
-        X_group = 1,
-        Lambda_beta_var_shape = 3,
-        Lambda_beta_var_rate = 1,
-        delta_iterations_factor = 100   # parameter that affects mixing of the MCMC sampler. This value is generally fine.
-      )
-MegaLMM_state = set_priors_MegaLMM(MegaLMM_state,priors)  # apply the priors
-MegaLMM_state$current_state = MegaLMM_state$priors$Lambda_prior$sampler(MegaLMM_state)
-for(i in 1:20) MegaLMM_state$current_state = sample_latent_traits(MegaLMM_state)
-j=3;plot(MegaLMM_state$current_state$Lambda[j,],MegaLMM_state$current_state$Lambda_mean[j,]);abline(0,1)
-
-MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)
-traceplot_array(MegaLMM_state$Posterior$Lambda,facet_dim=2,name = 'Lambda.pdf')
-traceplot_array(MegaLMM_state$Posterior$Lambda_beta,facet_dim=2,name = 'Lambda_beta.pdf')
+n_iter = 50
+for(i in 1:4) {
+  print(sprintf('Sampling run %d',i))
+  MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter) 
+  MegaLMM_state = save_posterior_chunk(MegaLMM_state)
+  print(MegaLMM_state)
+}
 ```
 
+## Work with the Posterior samples
 
 ```{r}
 # Because this was a simulation, we can make some special diagnostic plots by passing in the true values
@@ -219,7 +182,6 @@ plot(MegaLMM_state,setup = setup)
 
 Look for the output in the `MegaLMM_example` (our `run_ID`) directory.
 
-## Work with the Posterior samples
 
 ```{r}
 # reload the whole database of posterior samples
