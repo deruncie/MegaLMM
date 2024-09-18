@@ -1,7 +1,7 @@
 Package: MegaLMM
 Type: Package
 Title: MegaLMM
-Version: 0.1.0
+Version: 0.9.5
 Author: Daniel E Runcie
 Maintainer: Daniel E Runcie <druncie@ucdavis.edu>
 Description: Efficient implementation the MegaLMM model of Runcie et al 2020
