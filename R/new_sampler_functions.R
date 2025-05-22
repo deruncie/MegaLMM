@@ -135,7 +135,7 @@ B2_prec_horseshoe_sampler = function(MegaLMM_state,...) {
   run_variables  = MegaLMM_state$run_variables
   run_parameters = MegaLMM_state$run_parameters
   current_state  = MegaLMM_state$current_state
-  current_state$B2_R = assemble_matrix(current_state,matrices = 'B2_R')
+  current_state$B2_R = assemble_matrix(current_state,matrix = 'B2_R')
   
   current_state = with(c(priors,run_variables,run_parameters),
                        with(B2_prior,{

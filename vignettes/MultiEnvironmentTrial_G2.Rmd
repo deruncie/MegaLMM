@@ -1,0 +1,839 @@
+---
+title: "MultiEnvironmentTrial"
+output: 
+  html_notebook:
+    toc: yes
+    toc_float:
+      toc_collapsed: true
+    toc_depth: 3
+    number_sections: true
+vignette: >
+  %\VignetteIndexEntry{MultiEnvironmentTrial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+This tutorial introduces use to the main functions of the `MegaLMM` R package.
+
+We will use `MegaLMM` to do Genomic Prediction for a set of maize lines in a large multi-environmental trial. Multi-environment trials are used to evaluate candidate varieties under different environments to learn which varieties might be useful for particular locations. This is important because **Gene-Environment Interactions** are very common in plants, which means that the relative performances of varieties may change across different environments, so the same line won't necessarily be best everywhere.
+
+Gene-environment interactions are often thought of as reaction norms, where we plot the change in a line's performance as a function of the environment. However, an equivalent model for gene-environment interactions is to think of the trait value in each environment as a separate trait, and model the correlation in trait values across environments. As reaction norms, gene-environment interactions are represented by lines with different slopes. As correlated traits, gene-environment interactions are represented by correlations in traits that are less than one.
+
+In `MegaLMM` we model gene-environment interactions as correlated traits, because this takes advantage of `MegaLMM`'s ability to model the covariances among a large number of traits. We will use `MegaLMM` to estimate the additive genetic and non-additive genetic covariances among all trials, and then use these covariances to predict the genetic values of every line in every trial. This is particularly useful when multi-environmental trials are *incomplete* meaning that not every line is evaluated in every trial. Specifically, we will leverage the relative line performances in some trials and the covariances among trials to predict the line performances in trials where they were not observed. We will use **cross-validation** to evaluate the accuracy of these predictions, and compare them to predictions in each trial that we would have made treating each trial independently.
+
+The data are based on data from the [Genomes To Fields Initiative](https://www.genomes2fields.org/) which is a large consortium growing maize hybrids across a large number of trials across North America, but have been anonymized and subsetted to a smaller set for demonstration.
+
+# Preliminaries
+
+We will use the `MegaLMM`, `rrBLUP`, and `ggplot2` packages.
+
+`rrBLUP` and `ggplot2` can be installed from CRAN if you do not have them already:
+
+```{r}
+# install.packages('rrBLUP','ggplot2')  # uncomment if needed to install
+library(rrBLUP)
+library(ggplot2)
+```
+
+`MegaLMM` is installed from github:
+
+```{r}
+# devtools::install_github('deruncie/MegaLMM') # uncomment if needed to install. Install devtools first if needed with install.packages('devtools')
+library(MegaLMM)
+```
+
+# Load the data and format for MegaLMM
+
+The data files for this tutorial are included with the `MegaLMM` package and can be accessed with the `data()` function:
+
+Yield data are in the file `Yield_trial_BLUPs` and include 3,318 yield measurements from 502 lines and 19 environments.
+
+```{r}
+data('yield_data',package='MegaLMM')
+yield_data
+```
+
+We can see the incidence matrix of lines by environments using the `Image` function in `MegaLMM`
+
+```{r}
+Image(as.matrix(table(yield_data$Line,yield_data$Env))) + theme(legend.position = 'none') + xlab('Environment') + ylab('Line')
+```
+
+As you can see, no line is grown in every environment, and no environment includes every line. In fact, there seems to be largely 2 sets of lines, one grown in \~1/4 the environments and the other grown in a portion of the remaining environments. These two sets of lines are designated as different "populations" in the input data.
+
+We can look at the number of observations by line and by environment:
+
+```{r}
+hist(table(yield_data$Line),main = 'Environments per line',breaks=20)
+hist(table(yield_data$Env),main = 'Lines per Environment',breaks=20)
+```
+
+The genetic data is available as an additive genomic relationship matrix calculated from GBS SNPs.
+
+```{r}
+data('K',package='MegaLMM')
+```
+
+We can view the matrix also using `Image`
+
+```{r}
+Image(K)
+```
+
+This shows we also have two groups of fairly related lines, with low relationships between groups.
+
+## Formatting data from `MegaLMM`
+
+The yield data was provided in the **tall** format, meaning a single observation per row. In this format we would say we have 1 trait (`Yield`) with values measured in many environments.
+
+But `MegaLMM` isn't good for modeling GxE like this. Instead, we want to consider the yield in each environment as a separate trait, and each line is measured for 6-9 of these traits. So we need to construct a `502x19` trait matrix. The `MegaLMM` package includes a helper function to do this called `create_data_matrices`. This uses `tidyr`'s `pivot_wider` function to create the matrix, and the arguments are the same.
+
+```{r}
+data_matrices = create_data_matrices(
+  tall_data = yield_data, # your input tall data.frame,
+  id_cols = c('Line','Population'), # vector giving the set of columns of tall_data used to identify each individual, and any covariates you'll want to use to model the trait data across individuals.
+  names_from = 'Env', # vector giving the set of columns of tall_data used to identify each trait 
+  values_from = 'Yield' # name of the trait data column
+)
+```
+
+The output of `create_data_matrices` is a list with 3 elements. We'll only use the first two.
+
+The first is a new data.frame with one row per individual, and a single column giving the Line identifier. If you have covariates among lines (e.g. sex, population, etc), those variables should be included here too.
+
+```{r}
+sample_data = data_matrices$data
+sample_data
+```
+
+The second is the `nxp` trait matrix. The rows of the trait matrix are aligned with the rows of the individual identifier data.frame. We can extract these for use in `MegaLMM`:
+
+```{r}
+Y = data_matrices$Y
+head(Y)[,1:5]
+```
+
+One check we need to do is ensure all our individuals in our data are represented in the genomic relationship matrix:
+
+```{r}
+all(rownames(K) %in% sample_data$Line)
+K = K[sample_data$Line,sample_data$Line]
+```
+
+# Set up Cross Validation
+
+The goal of genomic prediction is to accurately predict the genetic values of individuals that are not observed in a particular environment. The standard way to estimate this accuracy is to mask a portion of the lines in the input data, use a model to predict these masked values, and then measure the correlation between the predicted values and the original data. In this tutorial we will do only 1 round of a k-fold cross-validation. Generally you would repeat this with other training / testing partition.
+
+Because we are evaluating the accuracy for incomplete multi-environment trial prediction, we will mask different set of individuals in each environment, so each individual maintains input data in at least some individuals.
+
+Because the individuals are stratified between two populations, we will ensure all testing individuals come from the same population. The masking algorithm will be:
+
+1.  For each environment, decide which population is best represented
+2.  For the observed individuals in that population, divide them into k-folds
+3.  Create a matrix with the testing sets (fold_ID) for each observation
+
+Not not worry about understanding this code! The call to `set.seed()` at the beginning makes it repeatable.
+
+```{r}
+set.seed(1)
+k_fold = 5 # we will hold out 1/5 = 20% of the observations from each environment
+fold_ID_matrix = matrix(NA,nrow = nrow(Y),ncol = ncol(Y),dimnames = dimnames(Y))
+for(i in 1:ncol(fold_ID_matrix)) {
+  observed_lines = sample_data[!is.na(Y[,i]),]
+  pop = names(sort(table(observed_lines$Population),decreasing=T))[1]
+  observed_lines = subset(observed_lines,Population == pop)
+  n_lines = nrow(observed_lines)
+  observed_lines$fold = sample(rep(1:k_fold,(n_lines/k_fold)+1))[1:n_lines]
+  fold_ID_matrix[match(observed_lines$Line,rownames(fold_ID_matrix)),i] = observed_lines$fold
+}
+```
+
+Now that we have divided the observed data into folds, we can chose to mask fold==1 to create our training data, and extract the corresponding values as our testing data
+
+```{r}
+fold_ID = 1
+Y_train = Y_testing = Y
+Y_train[fold_ID_matrix == fold_ID] = NA
+Y_testing[fold_ID_matrix != fold_ID | is.na(fold_ID_matrix)] = NA
+```
+
+# Run univariate GBLUP as reference
+
+To evaluate whether the multi-trait prediction from `MegaLMM` is useful, we'll run normal univariate genomic prediction using the GBLUP model using the `rrBLUP` package.
+
+```{r}
+library(rrBLUP)
+rrBLUP_predictions = matrix(NA,nrow(Y),ncol(Y),dimnames = dimnames(Y))
+for(i in 1:ncol(Y)) {
+  X = model.matrix(~Population,sample_data) # we will include Population as a covariate if it is variable among the individuals for this environment
+  if(var(X[!is.na(Y_train[,i]),2]) == 0) X = X[,-2]
+  # rrBLUP_predictions[,i] = mixed.solve(y = Y_train[,i],
+  #                                      X = X,
+  #                                      K = K)$u
+  rrBLUP_predictions[,i] = mixed.solve(y = Y_train[,i],
+                                       # X = X,
+                                       K = K)$u
+}
+```
+
+Here are the correlations between the predictions and the testing data:
+
+```{r}
+diag(cor(Y_testing,rrBLUP_predictions,use='p'))
+```
+
+# Run MegaLMM
+
+Now, we'll move to `MegaLMM` and fit a multivariate GBLUP model to all trials at once.
+
+First, I'll review the `MegaLMM` model, and then describe the implementation and usage of the `R` package.
+
+## Background
+
+#### The MegaLMM model
+
+**MegaLMM** implements multivariate linear mixed models of the form:
+
+```         
+Y = X*B + Z*U + E
+```
+
+where `Y` is a `n x t` matrix of observations for `n` individuals and `t` traits, `X` is a design matrix for `b` fixed effects (including an intercept), `Z` is a design matrix for the random effects, and `E` is a `n x t` matrix of residual errors. The random effects are `U` are independent of the residuals, but columns of `U` matrix can be correlated, and each column vector marginally follows a multivariate normal distribution with a known covariance matrix `K`.
+
+MvLMMs like this are notoriously difficult to fit. We address this by re-paramterizing the MvLMM as a mixed effect factor model:
+
+```         
+Y = F*Lambda + Y_R
+Y_R = X*B_R + Z*U_R + E_R
+F = X*B_F + Z*U_F + E_F
+```
+
+where `F` is a `n x k` matrix of latent factor traits and `Lambda` is a `k x t` matrix of factor loadings. This is the model actually fit by **MegaLMM**. Basically, we break `Y` which is a set of `t` correlated traits into two sets of uncorrelated traits: `Y_R` and `F`. These are sets of `t` and `K` traits all of which are independently related to the fixed and random effects. All covariances within and among these sets of traits are captured by `Lambda`. Because of this, we can treat each of the columns of `Y_R` or `F` independently and specific a LMM for each of them. Generally, we use the same `X`, `Z` and `K` for all these traits. However in `MegaLMM` we allow some additional flexibility:
+
+-   The fixed effect design matrix `X` is split into two parts: `X_1` and `X_2`. `X_1` are true fixed effects meaning the corresponding coefficients (`B_1`) are given flat priors. Because of this, we can't allow `F` to depend on `X_1`, so this is only part of the model for `Y_r`. `X_2` are regularized effects, so the corresponding coefficients are given an informative prior (e.g. BayesC). We allow both `Y_R` and `F` to depend on `X_2`, and potentially on different subsets of `X_2`: `X_2F` and `X_2R`, with corresponding coefficient matrices `B_2F` and `B_2R`. We do not make use of these matrices in this tutorial. The full models thus are: `Y_R = X_1*B_1 + X_2R*B_2R + Z*U_R + E_R` and `F = X_2F*B_2F + Z*U_F + E_F`.
+-   While the same model structure applies to all columns of `Y_R`, because of missing values not all columns of `X_1` may be variable for a particular trait. Therefore we drop columns of `X_1` as needed and assign the coefficients to 0.
+-   While I only wrote a single random effect above, `MegaLMM` does allow you to specific multiple independent random effects with different covariance matrices. However the memory and time complexities increase exponentially with more random effects. And, we cannot account for correlations among `U_i` and `U_j`.
+
+Taking a single column of `Y_R`, the LMM is:
+
+$$
+y_r = X\times b_r + Z\times u_r + e_r \\
+u_r \sim N(0,\sigma^2*h^2*K) \\
+e_r \sim N(0,\sigma^2*(1-h^2)*I)
+$$
+
+The model for each column of `F` is similar. This differs from most Bayesian LMMs in the parameterization of the variance components, but has some conceptual and algorithmic advantages. For priors, we use an inverse gamma prior for $\sigma^2$ and a discrete prior on $h^2$. Specification of the priors is described below.
+
+The unique aspects of **MegaLMM** relative to other factor models are:
+
+1.  The residuals of `Y` after accounting for the factors are not assumed to be iid, but are modeled with independent (across traits) LMMs accounting for both fixed and random effects.
+2.  The factors themselves are also not assumed to be iid, but are modeled with the same LMMs. This highlights the parallel belief that these latent factors represent traits that we just didn't measure directly.
+3.  Each factor is shared by all modeled sources of variation (fixed effects, random effects and residuals), rather than being unique to a particular source.
+4.  The factor loadings are strongly regularized so ensure that estimation is efficient. We accomplish this by ordering the factors from most-to-least important using a prior similar to that proposed by [Bhattarchya and Dunson (2011)](https://pubmed.ncbi.nlm.nih.gov/23049129/)
+
+#### Model formula
+
+We use R's `formula` syntax to construct the design matrices `X` and `Z`. In default usage, we specific a single formula and assume it applies to all columns of both `Y_R` and `F`, except the fixed effects do not apply to `F`.
+
+#### Random effects
+
+The random effect syntax in a formula is `(a|X)`. This specifies a variance for each level of `a` (*e.g.* environment) for the location effects for each level of `X` (*e.g.* genotype, *i.e.* variance among genotypes in each environment). In `lme4` syntax, there would additionally be covariances between the levels of `a` within each level of `X`. However we cannot model these covariances in `MegaLMM`, so this syntax makes independent variances for each level of `a`. Note, however, that each level of `a` introduces a new variance into the model, which exponentially increases the memory requirements! It is much better, if possible, to introduce each level of `a` as a separate trait!
+
+Random effects have two parts: **location effects** which are the values for each level (*e.g.* breeding values for each individual) and **variances** which are the population variances of the location effects. We model the location effects as following a multivariate normal distribution with covariance equal to a known covariance matrix (**K**) times a **variance proportion** ($h^2$) times a phenotypic variance ($\sigma^2$). This differs slightly from typical parameterizations of random effects, which uses a separate variance for each random effect. In `MegaLMM` we instead model the proportion that each random effect contributes to the total, so all $h^2_i$ values sum to 1, and use a discrete prior over the interval [0,1] for this parameter. This gives you a lot of flexibility for specifying prior distributions.
+
+#### Factors
+
+In most factor models the number of factors `K` is a critical parameter, and models with different numbers of parameters (either larger or smaller than optimal) may give very different answers. This is generally not the case in `MegaLMM`. In `MegaLMM` we use a prior to order and regularize the importance of the factors, enforcing that high-order factors explain less and less of the overall variation. Therefore the highest-order factors are generally extremely unimportant, and adding a few more or fewer of these unimportant factors won't change the influence of the first factors. It is important to set `K` large enough to capture most of the covariation in `Y`, but once it's large enough, additional values will not likely affect the model much.
+
+A related note, though, is that the precise ordering of the factors is not well learned by the MCMC algorithm, and so inferences that rely on this should be treated with extreme caution. The rate of decay of factor importance is highly sensitive to the prior, and factor ordering does not mix well. Routines are described below to help the convergence of factor ordering to a useful value, but that is all we can do. This also means that the precise values of individual factor loadings may drift during the MCMC as factor orderings change slowly. This would greatly impact the inference on factor identities, but is not very important if the goal is prediction of `U` or `Y`.
+
+#### Missing data
+
+In a Bayesian model, we can treat missing data as additional parameters that need to be learned, so imputation of missing data happens naturally. However, if we construct the model correctly, some missing data points are not needed for the inference of any other parameters, and so can be simply predicted from the posterior values of other parameters. The more missing values we can treat this way the better, because conditioning on imputed values in MCMC greatly reduces the mixing rate of the chain.
+
+In `MegaLMM`, if we can identify groups of traits that share missing values across a group of individuals (rows), we can declare that this block of values to be only predicted, not imputed. There is a tradeoff here in that the more groups of traits are specified, the greater the memory overhead of `MegaLMM`. But the improvement in MCMC mixing can be great.
+
+#### MCMC and Posterior samples
+
+`MegaLMM` uses a Gibbs sampler to draw samples from posterior of all unknown parameters. There are a lot of parameters in the `MegaLMM` model, and not all of them may be of interest to a user. You can choose which specific parameters should be tracked as described below. Additionally, you may be interested in a function of several parameters, and there is a function to calculate these values on each iteration as well. Finally, the sets of posterior samples can themselves be very large. If you're tracking large matrices of predicted values for thousands of traits these posterior samples can take of Gbs of memory. Therefore `MegaLMM` has a way to store the posterior samples as a database on the disk, only holding small chunks of a chain in memory at a time.
+
+## Running MegaLMM
+
+#### Set control parameters
+
+The first function for `MegaLMM` sets several parameters of the model. Only a few are noted here. See the help page for more control parameters. The output is a list that will be passed to the main model construction function below.
+
+```{r}
+run_parameters = MegaLMM_control(
+  h2_divisions = 20, 
+    # Each variance component is allowed to explain between 0% and 100% of the
+      # total variation. How many segments should the range [0,100) be divided 
+      # into for each random effect?
+  burn = 0,  
+    # number of burn in samples before saving posterior samples. I set this to 
+      # zero and instead run the chain in small chunks, doing the burning manually, a
+      # s described below.
+  thin = 2,
+    # during sampling, we'll save every 2nd sample to the posterior database.
+  K = 15 # number of factors. With 19 traits, this is likely way higher than needed.
+)
+```
+
+#### Create the model object
+
+The function `setup_model_MegaLMM` parses the model formulas, links the GRM to the random effects, and creates an object to store all components of the model.
+
+```{r}
+sample_data$ibc = diag(K)
+MegaLMM_state = setup_model_MegaLMM(
+  Y = Y_train,  
+    # The n x p trait matrix
+  # formula = ~ Population + ibc + (1|Line),  
+  formula = ~ 1 + (1|Line),  
+    # This is syntax like lme4 for mixed effect models. 
+      # We specify a fixed effect of population and a random effect for genotype (Line)
+  data = sample_data,         
+    # the data.frame with information for constructing the model matrices
+  relmat = list(Line = K), 
+    # A list of covariance matrices to link to the random effects in formula.
+      # each grouping variable in formula can be linked to a covariance matrix.
+      # If so, every level of the grouping variable must be in the rownames of K.
+      # additional rows of K not present in data will still be predicted 
+        # (and therefore will use memory and computational time!)
+  run_parameters=run_parameters,
+    # This list of control parameters created above
+  run_ID = sprintf('MegaLMM_fold_%02d',fold_ID)
+    # A run identifier. The function will create a folder with this name 
+      # and store lots of useful data inside it
+)
+```
+
+The output is the variable `MegaLMM_state` which is an object of class `MegaLMM_state` including the following slots:
+
+-   `current_state`: a list with elements holding the current values for all model parameters. Each parameter is stored as a 2d matrix. Variable names correspond as closely as possible to those described in the manuscript: Runcie et al 2020.
+-   `Posterior`: a list with elements 3d or 2d arrays holding posterior samples (or posterior means) of specified model parameters. By default, samples of all parameters are stored. However these matrices can be large if data is large, so parameters can be dropped from this list by removing their names from the lists `MegaLMM_state$Posterior$posteriorSample_params` and `MegaLMM_state$Posterior$posteriorMean_params`.
+-   `run_ID`: The current state of the chain plus Posterior samples and any diagnostic plots are automatically saved in a folder with this name during the run.
+
+Before we can run the model, we have to do a few more steps
+
+#### Set priors
+
+We need to set priors for the variance components ($\sigma^2$ and $h^2$ for `Y_R` and `F`, and for the parameters of the factor loadings `Lambda`.
+
+For `Lambda`, we have several types of priors as described in the MegaLMM papers. In this tutorial we will use the horseshoe prior from the Genome Biology paper:
+
+```{r}
+Lambda_prior = list(
+    sampler = sample_Lambda_prec_horseshoe,
+      # function that implements the horseshoe-based Lambda prior
+          # described in Runcie et al 2020.
+          #See code to see requirements for this function.
+      # other options are:
+          # ?sample_Lambda_prec_ARD,
+          # ?sample_Lambda_prec_BayesC
+    prop_0 = 0.1,
+      # prior guess at the number of non-zero loadings in the first and most important factor
+    delta = list(shape = 3, scale = 1),
+      # parameters of the gamma distribution giving the expected change
+          # in proportion of non-zero loadings in each consecutive factor
+    delta_iterations_factor = 100
+      # parameter that affects mixing of the MCMC sampler. This value is generally fine.
+  )
+
+Lambda_prior = list(
+    sampler = sample_Lambda_prec_ARD,
+    Lambda_df = 3,
+    delta_1 = list(shape = 20,rate=1),
+    delta_2 = list(shape = 3,rate=1),
+    # X = setup$Lambda_X,
+    delta_iterations_factor = 100
+)
+#     dta_1   = list(shape = 2,  rate = 1),
+#     dlta_   = list(shape = 3, rate = 1),
+#       parameters of the gamma distribution giving the expected change
+#
+# in proportion of non-zero loadings in each consecutive factor
+#     deltiterations_factor = 100
+#   rameter that affects mixing of the MCMC sampler. This value is generally fine.
+#   )
+# 
+# Lama_prior = list(
+#       sampler = sample_Lambda_prec_BayesC, # function that implements the horseshoe-based Lambda prior described in Runcie et al 2020. See code to see requirements for this function.
+#       Lambda_df = 4,
+#       Lambda_scale = 1,
+#       delta_1 = list(shape = 20, rate = 1/2),
+#       delta_2 = list(shape = 3, rate = 1),
+#       fixed_pi = .9,
+#       delta_iterations_factor = 100   # parameter that affects mixing of the MCMC sampler. This value is generally fine.
+#     )
+```
+
+For the remaining priors we use `MegaLMM_priors`
+
+```{r}
+priors = MegaLMM_priors(
+  tot_Y_var = list(V = 0.5,   nu = 5),      
+    # Prior variance of trait residuals after accounting for fixed effects and factors
+      # See MCMCglmm for meaning of V and nu
+  tot_F_var = list(V = 18/20, nu = 20),     
+    # Prior variance of factor traits. This is included to improve MCMC mixing, 
+      # but can be turned off by setting nu very large
+  h2_priors_resids_fun = function(h2s,n)  1,  
+    # Function that returns the prior density for any value of the h2s vector 
+        # (ie the vector of random effect proportional variances across all random effects. 
+        # 1 means constant prior. 
+        # n is the number of h2 divisions above (here=20)
+        # 1-n*sum(h2s)/n linearly interpolates between 1 and 0, 
+            # giving more weight to lower values
+  h2_priors_factors_fun = function(h2s,n) 1, 
+    # See above. 
+        # sum(h2s) linearly interpolates between 0 and 1,
+            # giving more weight to higher values
+        # Another choice is one that gives 50% weight to h2==0: ifelse(h2s == 0,n,n/(n-1))
+  Lambda_prior = Lambda_prior
+    # from above
+)
+```
+
+We then assign them to the `MegaLMM_state` object:
+
+```{r}
+MegaLMM_state = set_priors_MegaLMM(MegaLMM_state,priors)
+```
+
+#### Deal with the missing data
+
+As described above, if missing values can be grouped into line:environment sets that are 100% missing, these sets can be dropped from the model and only predicted from the posterior of other parameters. The following code attempts to find an optimal partitioning of values to maximize the number of dropped NA values in the smallest number of groups
+
+```{r}
+maps = make_Missing_data_map(MegaLMM_state,max_NA_groups = ncol(Y)+1,verbose=F)
+maps$map_results
+```
+
+Using the 15th map above might be a good option:
+
+```{r}
+MegaLMM_state = set_Missing_data_map(MegaLMM_state,maps$Missing_data_map_list[[15]])
+```
+
+#### Initialize the model object
+
+Next, we create random starting values for all parameters:
+
+```{r}
+MegaLMM_state = initialize_variables_MegaLMM(MegaLMM_state)
+MegaLMM_state$run_parameters$burn = run_parameters$burn
+```
+
+### Initialize parameters and posterior database
+
+Now, we need to calculate some matrices that `MegaLMM` will use repeatedly during the Gibbs sampler. These calculations can take quite a bit of time for large models, particular when there are a lot of individuals, more than 1 random effect, and many groups of traits from the missing data map.
+
+#### Memory usage
+
+The stored matrices can also use a lot of RAM. It is a good idea to first get an estimate of how much RAM the model will need, before jumping in to the calculations. We can estimate the memory usage using the following function:
+
+```{r}
+estimate_memory_initialization_MegaLMM(MegaLMM_state)
+```
+
+Because this dataset is small and there is only 1 random effect, the memory requirements are low.
+
+#### Pre-calculate useful matrices
+
+Now we can run these preliminary calculations:
+
+```{r}
+MegaLMM_state = initialize_MegaLMM(MegaLMM_state,verbose = T)
+```
+
+#### Prepare the Posterior database
+
+As described above, the `MegaLMM` has many parameters, and we could store posterior samples of all parameters. But there's not much use in storing large parameter arrays if we're not actually interested in the values of those parameters.
+
+Also, sometimes our interest is not really in *any* of the parameters, but instead in some function we can calculate from a set of parameters. For example, we're interested in `U`, the additive genetic values, or `Y` the genetic values, but those are not parameters of our `MegaLMM` model. We could store all parameters and then calculated these predicted values at the end, but that would be a waste of space.
+
+Instead, we can control which specific parameters are stored by the program.
+
+By default, `MegaLMM` stores individual posterior samples of some parameters, and posterior means of others. You can see the list of defaults here:
+
+These parameters have individual samples stores:
+
+```{r}
+MegaLMM_state$Posterior$posteriorSample_params
+```
+
+These parameters have only posterior means stores:
+
+```{r}
+MegaLMM_state$Posterior$posteriorMean_params
+```
+
+`Eta_mean` is the internal parameter for the predicted phenotypic value `Y`.
+
+In our case, many of these values are not useful, so I'll re-specify these lists:
+
+```{r}
+MegaLMM_state$Posterior$posteriorSample_params = c('Lambda','F_h2','resid_h2','tot_Eta_prec','B1')
+MegaLMM_state$Posterior$posteriorMean_params = 'Eta_mean'
+```
+
+But we also want to calculate the predicted genetic values. From the `MegaLMM` model, the predicted genetic values are the combination of the genetic component of `Y_R` (`U_R`), and the genetic component of `F` (`U_F`) rotated by the factor loadings:
+
+`U = U_F * Lambda + U_R`
+
+We can ask `MegaLMM` to calculate this value for us and save the posterior samples. I've also included code to calculate the genetic (**G**) and residual (**R**) covariances among environments, and the additive heritability of each environment because they might be interesting.
+
+```{r}
+MegaLMM_state$Posterior$posteriorFunctions = list(
+  U = 'U_F %*% Lambda + U_R + X1 %*% B1',
+  G = 't(Lambda) %*% diag(F_h2[1,]) %*% Lambda + diag(resid_h2[1,]/tot_Eta_prec[1,])',
+  R = 't(Lambda) %*% diag(1-F_h2[1,]) %*% Lambda + diag((1-resid_h2[1,])/tot_Eta_prec[1,])',
+  h2 = '(colSums(F_h2[1,]*Lambda^2)+resid_h2[1,]/tot_Eta_prec[1,])/(colSums(Lambda^2)+1/tot_Eta_prec[1,])'
+  )
+```
+
+Now that we've decided which values to save, we initialize the posterior database:
+
+```{r}
+MegaLMM_state = clear_Posterior(MegaLMM_state) 
+```
+
+As a final check, we should also assess how much memory the posterior samples will require.
+
+We can estimate with the `estimate_memory_posterior()` function, giving it a number of iterations we plan to run **in a single chunk (see below)**.
+
+```{r}
+estimate_memory_posterior(MegaLMM_state,100)
+```
+
+Since we're not saving any large matrices, the memory requirements will be low.
+
+## Run the MCMC and diagnose convergence
+
+We're finally ready to fit the model! Fitting the means running the Gibbs sampler. This is accomplished with the `sample_MegaLMM()` function, which takes a `MegaLMM_state` object and the number of iterations to run as arguments. We do run the chain in two stages: `burnin` and `sampling`.
+
+#### Burnin
+
+The burnin period is a period we wait until the chain comes to the stationary distribution. We can either wait a defined number of steps, or we can monitor convergence diagnostics, such as trace plots.
+
+I prefer to use trace plots of the parameters that I am interested in. Yes it is not completely safe to declare stationarity until all parameters are stationary, but especially when we are only interested in the posterior mean of something like breeding values or genetic covariance, this seems to work well, and correlations across replicate runs is generally high.
+
+While Gibbs samplers will eventually reach the stationary distribution, it is OK during the burnin phase to use some deliberate artificial jumps to push the chain into a location that likely has higher posterior mass. The one place that I've found this useful is in the order of the factors. Factor order is very sticky in the chain - it can take hundreds of iterations for any factor to switch. This means that factor order will never achieve a high effective sample size from this Gibbs sampler. However, I find that if I periodically check the observed importance of each factor during the burnin phase and then re-sort the factors, I achieve convergence of other parameters much more readily.
+
+Therefore, my recommended manual burnin goes through a few rounds of:
+
+1)  re-order the factors
+
+2)  draw a set of new samples from the chain
+
+3)  look at some trace plots.
+
+4)  If they look good, clear the samples and start collecting real posterior samples
+
+5)  If not, repeat again.
+
+```{r echo=FALSE, fig.keep='all', message=FALSE, results='hide'}
+n_iter = 100
+MegaLMM_state$run_parameters$which_sampler$Y = 2
+for(i in 1:5) {
+  print(sprintf('Burnin run %d',i))
+    # Factor order doesn't "mix" well in the MCMC.
+    # We can help it by manually re-ordering from biggest to smallest
+  MegaLMM_state = reorder_factors(MegaLMM_state,drop_cor_threshold = 0.6)
+    # clear any previous collected samples because we've re-started the chain 
+  MegaLMM_state = clear_Posterior(MegaLMM_state)
+    # Draw n_iter new samples, storing the chain
+  MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter)
+    # make diagnostic plots
+  traceplot_array(MegaLMM_state$Posterior$Lambda,name = 'Lambda.pdf')
+  traceplot_array(MegaLMM_state$Posterior$U,name = 'U.pdf',
+                  facet_dim = 3,mask = fold_ID_matrix != 1)
+  print(sprintf('Completed %d burnin samples', MegaLMM_state$current_state$nrun))
+}
+MegaLMM_state = clear_Posterior(MegaLMM_state)
+```
+
+The function `traceplot_array()` saves a pdf booklet in the `MegaLMM_state$run_ID` directory. To see them, navigate to this directory in finder and look for `Lambda.pdf` and `U.pdf`
+
+#### Collect posterior samples
+
+If we think the model is reasonable converged to stationary, we can now collect posterior samples.
+
+Since we're not going to collect a lot of samples, and we're not storing large matrices, we could do this in one run. But I'm still going to do it in a few chunks to demonstrate the `save_posterior_chunk()` function which saves the posterior samples to the database on disk, clears the posterior samples in memory, and continues sampling. We then load the samples we want back at the end.
+
+```{r}
+n_iter = 250
+for(i in 1:4) {
+  print(sprintf('Sampling run %d',i))
+  MegaLMM_state = sample_MegaLMM(MegaLMM_state,n_iter) 
+  MegaLMM_state = save_posterior_chunk(MegaLMM_state)
+  print(MegaLMM_state)
+}
+```
+
+Since our thinning rate is 2, and we run a total of 1000 sampling iterations, we end up with 500 posterior samples.
+
+#### Calculate predicted values and other posterior statistics
+
+While we've collected 500 posterior samples, if we actually look at the Posterior slot of `MegaLMM_state`, we'll find the posterior is empty:
+
+```{r}
+dim(MegaLMM_state$Posterior$Lambda)
+dim(MegaLMM_state$Posterior$U)
+```
+
+This is because the `save_posterior_chunk` function saves the samples to the disk. The posterior database is in the folder: `MegaLMM_fold_01/Posterior/*`. To reload samples of a particular parameter, use:
+
+```{r}
+Lambda_samples = load_posterior_param(MegaLMM_state,'Lambda')
+U_samples = load_posterior_param(MegaLMM_state,'U')
+dim(U_samples)
+```
+
+We can get posterior means with the `get_posterior_mean()` function:
+
+```{r}
+U_hat = get_posterior_mean(U_samples)
+```
+
+`U_hat` is our predicted additive genetic value for every line in every trial.
+
+We can also access the predicted total genetic value `Eta_mean`, which we stored as a posterior mean instead of as individual samples during the chain:
+
+```{r}
+Eta_mean = load_posterior_param(MegaLMM_state,'Eta_mean')
+```
+
+# Estimate Genomic Prediction accuracy
+
+Let's compare the accuracy of `MegaLMM's` predictions (`U_hat` or `Eta_mean`) to those of `rrBLUP`:
+
+```{r}
+library(bWGR)
+library(Matrix)
+# Z = t(chol(K[sample_data$Line,sample_data$Line]))
+Z = svd(K[sample_data$Line,sample_data$Line])
+Z = t(sqrt(Z$d)*t(Z$u))#[,1:50]
+uvb = UVBETA2(Y_train,Z)
+colSums(is.na(uvb))
+LS= LatentSpaces(Y_train,Z %*% uvb,10)
+a=sapply(1:ncol(Y_train),function(j) {
+  i = !is.na(Y_train[,j])
+  # a = solver2x(Y_train[i,j,drop=FALSE],LS[i,],Z[i,], df0 = 10.0)
+  # b = mrr2X(Y_train[i,j,drop=FALSE],LS[i,],Z[i,])
+  # c = GS_update3(Y_train[i,j],matrix(1,sum(i)),Z_list_ = list(LS[i,],Z[i,]),0,rep(0,ncol(Z)+ncol(LS)),1,c(1,1),c(rep(1,ncol(LS)),rep(2,ncol(Z))),numeric(0),numeric(0))
+  d = GS_update4(Y_train[i,j],matrix(1,sum(i)),Z_list = list(LS[i,],Z[i,]),0,rep(0,ncol(Z)+ncol(LS)),1,c(1,1),c(rep(1,ncol(LS)),rep(2,ncol(Z))),numeric(0),numeric(0),1)
+  # plot(c(b$mu,b$b1,b$b2),a);abline(0,1)
+  d
+})
+colSums(is.na(a))
+MEGA = MEGA(Y_train,Z)
+MEGAb = my_MEGA(Y_train,Z,times = 10,K=0,1e6)
+MEGA2 = my_MEGA(Y_train,Z,times = 10,K=10)
+MEGA3 = my_MEGA2(Y_train,Z,times = 1,K=10)
+wgp = MRR3(Y_train,Z)
+megags = MegaGS(Y_train,matrix(1,nrow(Y_train),1),Z,10)#,F=MegaLMM_state$current_state$F)#,MEGA=MEGA)#,F=megaLMM$F)
+
+ a = apply(Y_train,2,function(x) {
+   i = !is.na(x)
+    r2 = GS_update3(x[i],matrix(1,length(x[i])),Z_list_ = list(Z[i,]),0,rep(0,ncol(Z)),1,1,rep(1,ncol(Z)),numeric(0),numeric(0))
+    Z %*% r2$u
+    # r = mixed.solve(x,K=K)
+    # r = mixed.solve(x[i],Z=Z[i,])
+    # r3 = MRR3(matrix(x),Z)
+    # Ki = K[i,i]
+    # Zi = svd(Ki)
+    # Zi = t(sqrt(Zi$d)*t(Zi$u))
+    # r2i = GS_update3(x[i],matrix(1,length(x[i])),Z_list_ = list(Zi),0,rep(0,ncol(Zi)),1,1,rep(1,ncol(Z)),numeric(0),numeric(0))
+    # # Z %*% r2$u
+    # ri = mixed.solve(x[i],Z=Zi)
+    # r3i = MRR3(matrix(x[i]),Zi,verbose = T)
+    # Z %*% r3$b
+    
+  })
+ colSums(is.na(a))
+  summary(a)
+
+```
+
+```{r}
+rrBLUP_accuracy = diag(cor(Y_testing,rrBLUP_predictions,use='p'))
+MegaLMM_Uhat_accuracy = diag(cor(Y_testing,U_hat,use='p'))
+MegaLMM_Eta_mean_accuracy = diag(cor(Y_testing,Eta_mean,use='p'))
+
+mega_accuracy = diag(cor(Y_testing,MEGA$gebv,use='p'))
+mega_accuracy2 = diag(cor(Y_testing,MEGA$hat,use='p'))
+megab_accuracy = diag(cor(Y_testing,MEGAb$gebv,use='p'))
+megab_accuracy2 = diag(cor(Y_testing,MEGAb$hat,use='p'))
+mega2_accuracy = diag(cor(Y_testing,MEGA2$gebv,use='p'))
+mega2_accuracy2 = diag(cor(Y_testing,MEGA2$hat,use='p'))
+wgp_accuracy = diag(cor(Y_testing,wgp$hat,use='p'))
+gs_accuracy= diag(cor(Y_testing,Z %*% (megags$U_F %*% megags$Lambda + megags$U_R),use='p'))
+gs_accuracy2= diag(cor(Y_testing,(megags$F %*% megags$Lambda + Z %*% megags$U_R),use='p'))
+
+summary(gs_accuracy2-mega_accuracy2)
+summary(gs_accuracy-mega_accuracy)
+summary(MegaLMM_Eta_mean_accuracy-mega_accuracy2)
+summary(MegaLMM_Uhat_accuracy-mega_accuracy)
+summary(MegaLMM_Eta_mean_accuracy-wgp_accuracy)
+
+summary(cbind(MegaLMM_Uhat_accuracy,mega_accuracy,mega2_accuracy,wgp_accuracy,gs_accuracy)-rrBLUP_accuracy)
+summary(cbind(MegaLMM_Eta_mean_accuracy,mega_accuracy2,mega2_accuracy2,gs_accuracy2)-rrBLUP_accuracy)
+
+plot(rrBLUP_accuracy,MegaLMM_Uhat_accuracy);abline(0,1)
+plot(rrBLUP_accuracy,MegaLMM_Eta_mean_accuracy);abline(0,1)
+```
+
+We see that in most trials we gained considerable accuracy through the multi-trait modeling.
+
+```{r}
+plot(MegaLMM_Uhat_accuracy,MegaLMM_Eta_mean_accuracy);abline(0,1)
+```
+
+We also see that because `MegaLMM` can also look at non-additive-genetic covariances among lines (*i.e.* residual correlations that are not explained by `K` but still must be genetic), we generally gained a bit of additional accuracy.
+
+# Additional package details
+
+You can get a summary of the MCMC chain with the `print` and `summary` methods:
+
+```{r}
+print(MegaLMM_state)
+```
+
+```{r}
+summary(MegaLMM_state)
+```
+
+### Working with the posterior samples
+
+As I mentioned above, posterior samples can be saved to the disk like this:
+
+```{r}
+MegaLMM_state = save_posterior_chunk(MegaLMM_state)
+```
+
+When you do this, you no longer have direct access to the samples you've collected inside the `MegaLMM_state` object. Instead, they are stored in the folder: `[run_ID]/Posterior/` where `[run_ID]` is the name you gave to this model run above.
+
+```{r}
+dim(MegaLMM_state$Posterior$Lambda)
+```
+
+To load all posterior samples of a particular parameter back into `MegaLMM_state` so that you can work with them, you can either call:
+
+```{r}
+U = load_posterior_param(MegaLMM_state,'U')
+dim(U)
+```
+
+or you can reload all samples of all stored parameers with:
+
+```{r}
+MegaLMM_state$Posterior = reload_Posterior(MegaLMM_state)
+dim(MegaLMM_state$Posterior$Lambda)
+dim(MegaLMM_state$Posterior$F_h2)
+```
+
+As you can see above, we have collected 500 posterior samples. The samples for each parameter are stored as a 3-dimensional array. All parameters of the `MegaLMM` model are stored as 2-dimensional matrices. So `MegaLMM_state$Posterior\$Lambda[1,,]` will return the 1st posterior sample of the parameter Lambda, which has dimension $15 \times 19$ in this model because `K=15` and `t=19`. The parameter `F_h2` stores the variance component proportions for the random effect `Line` for the 15 latent factors. There is only 1 random effect, so the dimension of this matrix is $1 \times 15$.
+
+To assess convergence of a parameter, it's helpful to look at traceplots. You make a traceplot of a single parameter by extracting its chain and plotting it:
+
+```{r}
+plot(U[,1,2],type='l')
+```
+
+But it'd take a lot to make this plot for every element of every matrix. As a shortcut, the function `traceplot_array` can make lots of traceplots for a matrix parameter:
+
+```{r}
+traceplot_array(MegaLMM_state$Posterior$Lambda,facet_dim = 2,name = 'Lambda')
+```
+
+This will create a pdf booklet stored in the `[run_ID]` folder (*note in the next update, this will be changed to directly use the file name provided*). This will take the rows (`facet_dim=2`) or columns (`facet_dim=3`) of the provided parameter array and make a faceted plot, where within each facet a sampling of the values in that row/column will be selected (those with the largest posterior means) and traceplots will be made. Generally it is the largest values that are the most interesting, and will be most diagnostic of sampling issues.
+
+Often we want to calculate summaries of the posterior samples. Two functions are provided:
+
+```{r}
+U_hat = get_posterior_mean(U)
+dim(U_hat)
+```
+
+```{r}
+U_HPD = get_posterior_HPDinterval(U,prob = 0.95)
+dim(U_HPD)
+```
+
+The latter function will calculate lower and upper 0.95 Highest Posterior Density bounds for each element of the matrix `U`.
+
+Finally, we can calculate functions of the parameters, as long as all are stored in the Posterior database. For example, we can calculate the phenotypic covariance matrix at each posterior sample like this:
+
+```{r}
+P_samples = get_posterior_FUN(MegaLMM_state,t(Lambda) %*% Lambda + diag(1/tot_Eta_prec[1,]))
+dim(P_samples)
+```
+
+### Extracting random effect covariances
+
+We've focused on predicting location effects of the random effects of line for each trait (yield in each environment). But we can also extract the estimates and posterior distributions on the key variance-covariance parameters $\mathbf{G}$ and $\mathbf{R}$. The model for the genetic covariance in MegaLMM is: $\mathbf{G} = \mathbf{\Lambda^T \Sigma_{h^2_F} \Lambda} + \mathbf{\Psi \otimes \Sigma_{h^2_R}}$
+
+We can calculate this using the same syntax:
+
+```{r}
+G_samples = get_posterior_FUN(MegaLMM_state,
+              t(Lambda) %*% diag(F_h2[1,]) %*% Lambda + diag(resid_h2[,1]/tot_Eta_prec[1,])
+            )
+dim(G_samples)
+```
+
+But, if you look back, we actually defined this as one of the `posterior_functions` we specifed in the beginning, so it's actually already calculated for us, and we can just load the samples of this matrix directly:
+
+```{r}
+G_samples = load_posterior_param(MegaLMM_state,'G')
+R_samples = load_posterior_param(MegaLMM_state,'R')
+dim(G_samples)
+dim(R_samples)
+```
+
+### Extending the chain
+
+If you look at your posterior samples and decide that the model hasn't really converged, you can treat the current chain as an extended burnin and re-start the collection of posterior samples. I won't run the code here so we don't lose our current samples!
+
+```{r}
+#MegaLMM_state2 = clear_Posterior(MegaLMM_state)
+#print(MegaLMM_state2)
+```
+
+You'll see the `Posterior_samples` value has been set to 0.
+
+### Saving the model object
+
+Our current model object is not that big, and so you can save it directly:
+
+```{r}
+saveRDS(MegaLMM_state,file = 'MegaLMM_state_run_01.rds')
+```
+
+And then come back and reload it and go:
+
+```{r}
+MegaLMM_state = readRDS('MegaLMM_state_run_01.rds')
+print(MegaLMM_state)
+```
+
+However, to re-start the sampling, all you actually need is the initialized `MegaLMM_state` object and a stored `current_state` slot. This slot is a list with the current state of all parameters as well as the random number generator. This gets automatically saved in the `[run_ID]` directory, so you can re-run the `setup_model_MegaLMM()` function, add priors, initialize, etc, and then reload the `current_state` and resume the chain where you left off:
+
+```{r}
+MegaLMM_state$current_state = readRDS('MegaLMM_fold_01/current_state.rds')
+```
+
+### Convergence issues
+
+You may have noticed in some diagnostics that parameters of `Lambda` do seem to be drifting a lot, suggesting that the chain has not converged. This suggests you should probably run this model much longer. That is probably true. However, in my experience, posterior distributions of location effects like `U` do not change much with much longer chains - what's happening is that the magnitude of values of `Lambda` and the magnitude of corresponding columns of `F` are not identified in the likelihood, because the true term in the model is `F * Lambda`. So there's a lot of drift (poor mixing) in the magnitudes of those parameters, ever if their product is mixing well. Also, the order of columns of F (and rows of Lambda) is not identified in the likelihood. The prior does provide a fairly clear ordering, but it's still not unusual to have factors switch order. When this happens, `Lambda[1,3]` may take on the previous identity of `Lambda[2,3]` and so traceplots of `Lambda[1,3]` will not look good (or posterior means of this parameter. Therefore, I advise caution interpreting Lambda.
