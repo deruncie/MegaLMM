@@ -29,7 +29,8 @@ Imports:
   pryr
 Suggests:
   knitr, 
-  rmarkdown
+  rmarkdown,
+  rrBLUP
 LinkingTo: 
   Rcpp (>= 0.11.2), 
   RcppEigen (>= 0.3.3.3.0),
