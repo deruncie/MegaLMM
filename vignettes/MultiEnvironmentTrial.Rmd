@@ -1,12 +1,6 @@
 ---
 title: "MultiEnvironmentTrial"
-output: 
-  html_notebook:
-    toc: yes
-    toc_float:
-      toc_collapsed: true
-    toc_depth: 3
-    number_sections: true
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{MultiEnvironmentTrial}
   %\VignetteEngine{knitr::rmarkdown}
@@ -18,6 +12,23 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+```
+```{r setup, include = FALSE}
+# Default knitr settings
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+# Detect if we are building a vignette or rendering manually in RStudio
+if (interactive()) {
+  # Re-render using the richer format (with TOC)
+  rmarkdown::render(
+    knitr::current_input(),
+    output_format = rmarkdown::html_notebook(toc = TRUE, toc_depth = 3, number_sections = TRUE)
+  )
+  knitr::knit_exit()
+}
 ```
 
 # Introduction
