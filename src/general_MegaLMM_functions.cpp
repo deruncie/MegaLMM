@@ -85,7 +85,7 @@ VectorXd find_candidate_states(
   VectorXd indices(dists.size());
   int count = 0;
   for(int i = 0; i < dists.size(); i++){
-    if(dists[i] < step_size & dists[i] > 0) {
+    if(dists[i] < step_size && dists[i] > 0) {
       indices[count] = i;
       count++;
     }
