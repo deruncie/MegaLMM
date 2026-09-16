@@ -25,8 +25,7 @@ Imports:
   coda,
   splines,
   MASS,
-  tidyr,
-  pryr
+  tidyr
 Suggests:
   knitr, 
   rmarkdown,

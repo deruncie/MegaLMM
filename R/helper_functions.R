@@ -19,15 +19,14 @@
 #' @examples
 #' estimate_memory_initialization_MegaLMM(MegaLMM_state)
 estimate_memory_initialization_MegaLMM = function(MegaLMM_state) {
-  require(pryr)
 
   print(sprintf('Random effects: %s',paste(names(MegaLMM_state$data_matrices$RE_setup),collapse=', ')))
   print(sprintf('%d groups of traits and %d h2 grid cells',
                 length(MegaLMM_state$run_variables$Missing_data_map),
                 ncol(MegaLMM_state$data_matrices$h2s_matrix)))
   
-  base_size = object_size(MegaLMM_state)
-  base_sizes = lapply(MegaLMM_state,object_size)
+  base_size = utils::object.size(MegaLMM_state)
+  base_sizes = lapply(MegaLMM_state,utils::object.size)
   
   # create new MegaLMM_state object with only 1 h2-grid cell
   # initialize this model and measure its size
@@ -37,11 +36,11 @@ estimate_memory_initialization_MegaLMM = function(MegaLMM_state) {
   MegaLMM_state_grid1$data_matrices$h2s_matrix = h2s_matrix[,ncol(h2s_matrix),drop=FALSE]
   
   MegaLMM_state_grid1 = initialize_MegaLMM(MegaLMM_state_grid1,verbose = FALSE)
-  grid1_sizes = lapply(MegaLMM_state_grid1,object_size)
+  grid1_sizes = lapply(MegaLMM_state_grid1,utils::object.size)
   run_variables_base = MegaLMM_state_grid1$run_variables
   run_variables_base = run_variables_base[names(run_variables_base) %in% c('chol_V_list_list','chol_ZtZ_Kinv_list_list') == F]
   
-  estimated_run_variable_size = object_size(run_variables_base) + ncol(h2s_matrix) * object_size(MegaLMM_state_grid1$run_variables[c('chol_V_list_list','chol_ZtZ_Kinv_list_list')])
+  estimated_run_variable_size = utils::object.size(run_variables_base) + ncol(h2s_matrix) * utils::object.size(MegaLMM_state_grid1$run_variables[c('chol_V_list_list','chol_ZtZ_Kinv_list_list')])
   
   print(sprintf('Estimated initialized size: %s Gb',
                 format(signif((estimated_run_variable_size+base_size)/(1024^3),2))))
